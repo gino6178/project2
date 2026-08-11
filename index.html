@@ -243,6 +243,8 @@ The representation is an order of magnitude cheaper, tracks the photographs' own
     <tr><td><strong>Fidelity</strong></td><td>Longitudinal FID, orange</td><td>234.2±22.6</td><td class="win">178.4</td><td></td></tr>
     <tr><td></td><td>Transverse FID, orange</td><td>95.5±2.0</td><td class="win">79.8</td><td></td></tr>
     <tr><td></td><td>Colour, a* against the photographs' 13.4</td><td>23.4</td><td class="win">12.1</td><td></td></tr>
+    <tr><td><strong>Speed</strong></td><td>Render time at 2048 px</td><td>17.3 ms</td><td class="win">4.3 ms</td><td>4.0× faster</td></tr>
+    <tr><td></td><td>Peak VRAM</td><td>2,174 MB</td><td class="win">819 MB</td><td>2.7× less</td></tr>
     <tr><td><strong>Physics</strong></td><td>Per-cell material field</td><td>—</td><td class="win">R² 0.934</td><td>control −0.009</td></tr>
     <tr><td></td><td>Piece count after a cut</td><td>threshold-dependent</td><td class="win">exact</td><td></td></tr>
   </tbody></table></div>
@@ -347,6 +349,21 @@ On the orange the lattice leads on both orientations — transverse FID 79.8 aga
 <p>
 In colour the lattice matches the photographs closely — a* 13.9 against 13.4, saturation 0.758 against 0.750 — while the released models run red and oversaturated, at nearly twice the photographs' redness on the orange. The spectra separate the two in a different way. At the structural scale the lattice carries the most energy of the three (f/4: 0.0155 against the photographs' 0.0117 and the released model's 0.0137), and at the finest scale measured it is the closest of the two to the photographs (f/16: 0.00109 against 0.00142, where the released model overshoots to 0.00203). So the two place their detail at different scales: the lattice's sits where the segments and membranes are, and the released model's runs finer than the photographs do. This is a property of the supervision as much as of either representation — a per-pixel loss against a photograph of a different specimen compares fibres that can never be brought into register, and what a model does with that residual is visible in its spectrum.
 </p>
+
+<h3 id="runtime">Run-time cost</h3>
+<p>
+The primitive count is storage; this is what it buys when the object is rendered. At 2048 pixels
+the lattice renders four times faster in a third of the memory, and its cost is roughly flat in
+resolution where the released model's grows — a sub-pixel primitive is touched by more tiles as
+the frame grows, while a cell covers the same world extent whatever the frame is.
+</p>
+<div class="tw"><table>
+  <thead><tr><th>Orange, one view, RTX 3090</th><th></th><th>512</th><th>1024</th><th>2048</th><th>Peak VRAM</th></tr></thead>
+  <tbody>
+    <tr><td>FruitNinja</td><td>3,928,330 prims</td><td>5.8 ms</td><td>11.0 ms</td><td>17.3 ms</td><td>2,174 MB</td></tr>
+    <tr><td>Ours</td><td>898,563 cells</td><td class="win">2.9 ms</td><td class="win">1.9 ms</td><td class="win">4.3 ms</td><td class="win">819 MB</td></tr>
+    <tr><td></td><td></td><td>171 → <span class="win">341 fps</span></td><td>91 → <span class="win">527 fps</span></td><td>58 → <span class="win">231 fps</span></td><td>2.7× less</td></tr>
+  </tbody></table></div>
 
 <h3 id="material">Material, decomposed without being told</h3>
 <p>
