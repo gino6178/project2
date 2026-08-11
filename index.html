@@ -109,6 +109,155 @@ primitives and 55.0M — and interior fidelity is measured against them on held-
 protocol on one machine.
 </p>
 
+<h2 id="intro">Introduction</h2>
+<p>
+An object reconstructed by 3D Gaussian Splatting is a shell. Cut it and the camera sees through to
+the far side, because nothing inside was ever reconstructed. FruitNinja closes that gap: it fills the
+interior with opaque atomic Gaussians, defines a small set of cross-sectional planes, and optimises
+the interior against diffusion-generated references for those planes, so that a cut at an unseen
+angle still exposes something plausible.
+</p>
+<p>
+The filled interior is a point cloud, inherited from the ray-cast filling of PhysGaussian. That is
+sufficient for the question the paper asks — does the exposed face <em>look</em> right — and
+insufficient for the question immediately after it. An interactive system that cuts an object needs
+to know what it now holds: how many pieces exist, which primitive belongs to which, what may collide
+with what, what each region is made of. A point cloud answers none of these without first inventing
+an adjacency it does not have, and the answer then depends on the distance threshold used to invent
+it. Two neighbouring particles in a <em>k</em>-nearest-neighbour graph are connected because a number
+said so, not because the object is.
+</p>
+<p>
+So we change the representation and keep the supervision. The whole object — interior and skin alike
+— becomes a regular lattice: one Gaussian per occupied cell, positioned at the cell centre, with the
+skin refined to half the interior spacing. This is the same object the fill was approximating,
+quantised onto a grid, and quantising is exactly what turns a set of points into a graph.
+</p>
+
+<h2 id="related">Related Work</h2>
+
+<h3>Interior generation</h3>
+<p>
+PhysGaussian fills an object for simulation, identifying interior cells by ray casting along the six
+axis directions with an intersection-parity check, and gives each filled particle the opacity and
+colour of its nearest surface Gaussian; the interior is uniform and reads as smeared skin when
+exposed. FruitNinja supervises the interior with a diffusion prior on user-defined cross-sections and
+is the work we build on; its voxel grid is a smoothing device applied over free-floating Gaussians
+rather than the representation itself. GaussianFluent is concurrent and closest in aim: it uses a
+density voxel grid to find the enclosed volume and initialise interior Gaussians, generates interior
+texture by inpainting axis-aligned slice renders, and simulates brittle fracture with CD-MPM — but
+its grid is a scaffold for sampling, the primitives are neither one per cell nor lattice-indexed
+afterwards, and its fracture is damage-driven within a single solver rather than a decomposition into
+enumerated bodies. Per-view 2D inpainting of the exposed face produces a plausible image and no 3D
+state, so successive views disagree and each frame costs a full sampling pass. InnerGS reconstructs
+interiors from real slice data rather than generating them.
+</p>
+<p>
+The oldest and closest statement of the problem is not in this literature at all. Kopf et al.
+synthesise a <em>solid</em> texture from 2D exemplars — a volume whose arbitrary slices resemble a
+photograph of a different instance of the same material, with no pixel correspondence available — 
+which is, structurally, the supervision problem here posed nineteen years earlier and solved without
+learning.
+</p>
+
+<h3>Structured Gaussians</h3>
+<p>
+Scaffold-GS attaches Gaussians to anchor points and decodes their attributes with a small MLP; we
+adopt the device so that parameter count is decoupled from primitive count. Putting Gaussians on a
+regular grid is itself established: GaussianCube rearranges a fixed set into a voxel grid by optimal
+transport so a 3D U-Net can consume it, and VolSplat predicts one Gaussian per occupied voxel from a
+sparse feature grid. Octree-GS imposes a hierarchy for level of detail. In none of these is the grid
+used as an adjacency structure — GaussianCube's optimal-transport assignment does not even preserve
+geometric neighbourhood — and none addresses interiors or physics. We therefore claim not the lattice
+but what having it as <em>occupancy with adjacency</em> makes possible.
+</p>
+
+<h3>Topology and simulation on Gaussians</h3>
+<p>
+PhysGaussian drives Gaussians with the material point method, treating each primitive as a material
+point; fracture is supported in the sense that large deformation lets particles separate into groups,
+but those groups are never labelled and remain one particle set in one solver. GaussianFluent and
+Fracture-GS likewise drive all particles through a single background grid, so separation is emergent.
+VR-GS is the strongest alternative answer to how one obtains topology on Gaussians: it voxelises the
+centres into a VDB, extracts a watertight surface by marching cubes, tetrahedralises it, and embeds
+every kernel in the resulting cage. That does supply connectivity — at the cost of three hand-set
+parameters, a level set that must be watertight and well behaved, which is where thin and high-genus
+geometry fails, and a cage fixed at build time, so a cut requires re-meshing and re-embedding. Its
+per-kernel local tetrahedra are by construction connectivity-free, and its multi-object interactions
+are authored by semantic segmentation rather than derived from geometry. GaussianCut builds a
+<em>k</em>-nearest-neighbour affinity graph over Gaussians and partitions it by graph cut, which is a
+user-driven semantic partition rather than a geometric decomposition; the threshold-dependence we
+avoid is exactly the property of such a graph.
+</p>
+
+<h3>Segmentation from planar observations</h3>
+<p>
+Segmenting a 3D volume from a handful of 2D planes is the 2.5D problem of medical imaging, where the
+established fusion rules run from majority voting through softmax averaging to per-view-per-class
+learned weights, and where Multi-Planar U-Net is the precedent for planes that are not axis-aligned.
+For Gaussians specifically, FlashSplat shows that assigning labels so that rendered masks match given
+2D masks has a closed-form optimum — a vote weighted by each primitive's own alpha-transmittance
+contribution. The entire SAM-lifting family segments only what is visible from outside; we are not
+aware of prior work that decomposes a reconstructed <em>interior</em> into material regions supervised
+by cross-sections of a different specimen.
+</p>
+
+<h3>Positioning</h3>
+<p>
+What we claim is narrow and, we believe, unoccupied: a cut is answered by exact, parameter-free
+connected-component labelling on lattice adjacency, so the pieces are enumerated, each becomes a
+separate simulated body with its own state and material, and they collide as such. Emergent
+separation within one solver, offline decomposition by segmentation, and threshold-dependent graph
+partitions are different answers to a different question.
+</p>
+
+<h2 id="method">Method</h2>
+
+<h3>Pipeline</h3>
+<p>
+The released models are already filled, so there is no scan to start from and no density step to
+separate interior from exterior: the surface is recovered by binning primitives by direction from the
+centroid and keeping those within one fill layer of the furthest in their bin, and the paper's own
+<code>internal_filling</code> is re-run on it before quantising.
+</p>
+<figure>
+  <img src="assets/method.png" alt="Method overview">
+  <figcaption><strong>Top:</strong> the released model is already filled, so the surface is recovered
+  by direction from the centroid and the paper's own fill is re-run before quantising; the exterior
+  is projected from fourteen renders and pinned, and only the interior trains.
+  <strong>Bottom:</strong> what the lattice is for.</figcaption>
+</figure>
+
+<h3>The two-level lattice</h3>
+<p>
+The filled interior is quantised onto a grid: one Gaussian per occupied cell, positioned at the cell
+centre, with the skin refined to half the interior spacing so that the surface keeps its detail without
+paying for a fine grid throughout. Each cell stores an eight-dimensional feature, and a single shared
+MLP decodes every cell's appearance and opacity from it — position is implicit in the grid index. This
+is the same object the fill was approximating, quantised onto a grid, and quantising is what turns a
+set of points into a graph.
+</p>
+
+<h3>Supervision</h3>
+<p>
+Only the interior trains, against diffusion-generated references for a small set of cross-sectional
+planes, as in the published method. The exterior is not trained at all: fourteen renders of the
+recovered surface are projected onto the skin cells, each cell reading the pixel it projects to
+weighted by cosine over a 60° cone and by the rasteriser's own coverage, and then pinned. Every
+training schedule we tried degraded that projected exterior, because the exterior branch averages over
+views and averaging removes whatever only one view sees.
+</p>
+
+<h3>Quantisation details that are not cosmetic</h3>
+<p style="color:var(--mut);font-size:14px">
+The grid origin must be snapped to the lattice rather than taken from the extreme primitive — taken
+from the furthest point, which is a skin point on the finer grid, the interior points land on
+half-integers where rounding merges them in pairs, and 833,401 interior points became 185,295 cells
+silently. And the vertical axis must be classified by extent along the principal axes rather than
+taken as the least-variance direction, which on a near-spherical object is assembled from sampling
+noise.
+</p>
+
 <h2 id="summary">At a glance</h2>
 <p>
 The representation is an order of magnitude cheaper, keeps at least as much fine-scale detail at the
@@ -153,6 +302,10 @@ bodies that collide. The same lattice renders the same way at every resolution w
 <figure><img src="assets/resolution_crops.png" alt="The same region at three render resolutions">
   <figcaption>The same physical region, same model, three render resolutions. The released model is a
   cloud of points whose footprint comes from the rasteriser; the lattice cell is sized in the world.</figcaption></figure>
+<figure><img src="assets/resolution.png" alt="Gaps against render resolution">
+  <figcaption>The same measurement across four resolutions and both objects. How far a released model
+  survives depends on how densely it was filled: the orange fails at 2048, the watermelon — filled
+  about twice as densely for its size — at 4096. The lattice is flat.</figcaption></figure>
 
 <h3 id="cut">Cutting is an event with an answer</h3>
 <p>
@@ -302,86 +455,27 @@ clustering, their nearest-neighbour spacing being less than half their uniform s
 thirds. Matching the uniform figure costs 4.3× the cells, about 3.9M, which is their primitive count.
 So the resolution can be raised, and doing so spends exactly the advantage in cost.</div>
 
-<h2 id="motivation">Motivation</h2>
+<h2 id="conclusion">Conclusion</h2>
 <p>
-The interior a filling method leaves behind is a set of free particles. That form answers the question
-the paper asks — does the exposed face look right — and it does not survive the question immediately
-after it. A system that cuts an object needs to know what it now holds: how many pieces exist, which
-primitive belongs to which, what may collide with what, what each region is made of. A point cloud
-answers none of these without first inventing an adjacency it does not have, and the answer then
-depends on the distance threshold used to invent it. Two neighbouring particles in a
-<em>k</em>-nearest-neighbour graph are connected because a number said so, not because the object is.
+Putting the whole object on a voxel lattice preserves FruitNinja's supervision and its visual result
+while making the object something a system can query. The piece count after a cut becomes a labelling
+rather than a threshold choice, one MPM solver per piece follows directly and the pieces collide;
+material becomes a property the same feature decodes, decomposed without supervision; the appearance
+stops depending on the resolution it is rendered at; and neither the lattice nor the supervision
+assumes the object is star-shaped. The representation costs four to ten times fewer primitives and
+eight to seventeen times fewer parameters than the released models.
 </p>
-<div class="note"><strong>Why the free-particle form cannot report a piece count.</strong> There is no
-adjacency, so connectivity must be a <em>k</em>-nearest-neighbour graph with a distance threshold — and
-the number of pieces the system reports becomes a function of that threshold. A cut is then a filter
-over particles rather than an event that produces objects with identities.</div>
 <p>
-The second shortfall is in the primitives themselves. Every primitive in the released models stores
-<code>scale = −16</code>: they are points with no extent in the world, and the only thing that gives
-them a footprint on screen is the rasteriser's low-pass, a fixed number of pixels. The models were
-tuned at 512, where that footprint happens to match the primitive spacing. Raise the frame and the
-spacing grows with it while the footprint does not, so the section a viewer was shown dissolves into
-the background it was covering.
-</p>
-<figure><img src="assets/resolution.png" alt="Released model and lattice across render resolutions, with the background-fraction curve">
-  <figcaption>Left: the same transverse section of the released orange (top) and of the lattice
-  (bottom) at 512, 1024 and 2048 pixels. Right: the fraction of the section's own area that renders as
-  background, against render resolution.</figcaption></figure>
-<p>
-A third shortfall is semantic. A filled point cloud carries a colour per primitive and no statement
-about what any of them is, so a simulator downstream has no material field to read and must be handed
-one by hand. And the published dataset is entirely genus zero — every released model is star-shaped
-about its centroid — so a pipeline may quietly depend on that and nobody would find out. Each of these
-is a property of the representation rather than of the supervision, which is why the supervision is
-what we keep.
-</p>
-
-<h2 id="method">Method</h2>
-
-<h3>Pipeline</h3>
-<p>
-The released models are already filled, so there is no scan to start from and no density step to
-separate interior from exterior: the surface is recovered by binning primitives by direction from the
-centroid and keeping those within one fill layer of the furthest in their bin, and the paper's own
-<code>internal_filling</code> is re-run on it before quantising.
-</p>
-<figure>
-  <img src="assets/method.png" alt="Method overview">
-  <figcaption><strong>Top:</strong> the released model is already filled, so the surface is recovered
-  by direction from the centroid and the paper's own fill is re-run before quantising; the exterior
-  is projected from fourteen renders and pinned, and only the interior trains.
-  <strong>Bottom:</strong> what the lattice is for.</figcaption>
-</figure>
-
-<h3>The two-level lattice</h3>
-<p>
-The filled interior is quantised onto a grid: one Gaussian per occupied cell, positioned at the cell
-centre, with the skin refined to half the interior spacing so that the surface keeps its detail without
-paying for a fine grid throughout. Each cell stores an eight-dimensional feature, and a single shared
-MLP decodes every cell's appearance and opacity from it — position is implicit in the grid index. This
-is the same object the fill was approximating, quantised onto a grid, and quantising is what turns a
-set of points into a graph.
-</p>
-
-<h3>Supervision</h3>
-<p>
-Only the interior trains, against diffusion-generated references for a small set of cross-sectional
-planes, as in the published method. The exterior is not trained at all: fourteen renders of the
-recovered surface are projected onto the skin cells, each cell reading the pixel it projects to
-weighted by cosine over a 60° cone and by the rasteriser's own coverage, and then pinned. Every
-training schedule we tried degraded that projected exterior, because the exterior branch averages over
-views and averaging removes whatever only one view sees.
-</p>
-
-<h3>Quantisation details that are not cosmetic</h3>
-<p style="color:var(--mut);font-size:14px">
-The grid origin must be snapped to the lattice rather than taken from the extreme primitive — taken
-from the furthest point, which is a skin point on the finer grid, the interior points land on
-half-integers where rounding merges them in pairs, and 833,401 interior points became 185,295 cells
-silently. And the vertical axis must be classified by extent along the principal axes rather than
-taken as the least-variance direction, which on a near-spherical object is assembled from sampling
-noise.
+<strong>Limitations.</strong> Transverse sections score below the released models on both objects,
+and the surplus is not missing detail — in every band measured we carry more fine-scale energy than
+the photographs do — but grain, the residual of a per-pixel loss against a photograph of a different
+specimen whose structure can never be brought into register with ours. The lattice fixes its
+resolution in advance, so detail finer than a cell cannot appear anywhere; matching the released
+models' uniform-equivalent spacing would cost 4.3× the cells, which is their primitive count. The
+material field changes the simulated dynamics but does not yet produce a hard shell around a soft
+interior, because MPM transfers through one background grid and our shell is one to three cells
+thick. And the quantitative comparison rests on six reference photographs per orientation, which is
+what the dataset provides and is too few for these metrics to separate close results confidently.
 </p>
 
 <h2 id="bibtex">BibTex</h2>
