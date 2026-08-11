@@ -31,7 +31,7 @@
   .katex{font-size:1.02em}
   /* The interior-texture videos: one column per object, one row per viewing angle, so a reader
      compares down a column and the two angles of one object stay together. */
-  .vgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0 6px}
+  .vgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin:18px 0 6px}
   .vgrid video{width:100%;display:block;border-radius:3px;background:#fff}
   .vgrid .lab{font-size:13px;color:var(--mut);text-align:center;margin:2px 0 6px}
   @media (max-width:640px){ .vgrid{grid-template-columns:repeat(2,1fr)} }
@@ -436,31 +436,27 @@ at 2048, the watermelon, filled about twice as densely for its size, at 4096.</p
 
 <h3 id="interior">Interior textures</h3>
 <p>
-The plane sweeps along one fixed direction and the object is watched from two angles. The first row
-is head-on, the way a cross-section is supervised; the second is the same slices from 45&deg; off the
-plane normal. The comparison is the point: a texture that had been painted onto the supervised planes
-would be indistinguishable from a volumetric one in the first row and would flatten in the second.
-Ours holds. The segment boundaries keep their positions from frame to frame, the pith stays on the
-axis as the plane crosses it, and the peel keeps its thickness where the surface curves away.
+Each object is cut all the way through along one fixed direction, the slices are drawn apart along
+the cut normal, and the camera moves. Every section is then on screen at the same time, which is a
+stricter test than showing one plane at a time: a section that disagrees with its neighbours has
+nothing to hide behind, and the camera angle means each face is seen obliquely as well as
+broadside — a texture painted onto the supervised planes would give itself away in both. Two
+viewing angles per object.
 </p>
 <div class="vgrid">
-  <div><video src="assets/interior_orange_v0.mp4" autoplay loop muted playsinline preload="metadata"></video><div class="lab">Orange</div></div>
-  <div><video src="assets/interior_watermelon_v0.mp4" autoplay loop muted playsinline preload="metadata"></video><div class="lab">Watermelon</div></div>
-  <div><video src="assets/interior_doughnut_v0.mp4" autoplay loop muted playsinline preload="metadata"></video><div class="lab">Doughnut</div></div>
+  <div><video src="assets/interior_orange_v0.mp4" autoplay loop muted playsinline controls preload="metadata"></video><div class="lab">Orange &mdash; view 1</div></div>
+  <div><video src="assets/interior_orange_v1.mp4" autoplay loop muted playsinline controls preload="metadata"></video><div class="lab">Orange &mdash; view 2</div></div>
+  <div><video src="assets/interior_watermelon_v0.mp4" autoplay loop muted playsinline controls preload="metadata"></video><div class="lab">Watermelon &mdash; view 1</div></div>
+  <div><video src="assets/interior_watermelon_v1.mp4" autoplay loop muted playsinline controls preload="metadata"></video><div class="lab">Watermelon &mdash; view 2</div></div>
+  <div><video src="assets/interior_doughnut_v0.mp4" autoplay loop muted playsinline controls preload="metadata"></video><div class="lab">Doughnut &mdash; view 1</div></div>
+  <div><video src="assets/interior_doughnut_v1.mp4" autoplay loop muted playsinline controls preload="metadata"></video><div class="lab">Doughnut &mdash; view 2</div></div>
 </div>
-<p class="lab" style="text-align:center;color:var(--mut);font-size:13px;margin:0 0 14px">
-Head-on, along the cut normal.</p>
-<div class="vgrid">
-  <div><video src="assets/interior_orange_v1.mp4" autoplay loop muted playsinline preload="metadata"></video><div class="lab">Orange</div></div>
-  <div><video src="assets/interior_watermelon_v1.mp4" autoplay loop muted playsinline preload="metadata"></video><div class="lab">Watermelon</div></div>
-  <div><video src="assets/interior_doughnut_v1.mp4" autoplay loop muted playsinline preload="metadata"></video><div class="lab">Doughnut</div></div>
-</div>
-<p style="color:var(--mut);font-size:13px;text-align:center;margin:0">
-The same slices, 45&deg; off the normal.</p>
-<figcaption style="margin-top:12px">Consistency of the generated interior as each object is sliced
-along a fixed direction, from two viewing angles. The three objects are trained the same way and
-differ only in their references; the doughnut's hole means every one of its transverse sections is an
-annulus, which is a topology the section supervision has to reproduce rather than be told.</figcaption>
+<figcaption style="margin-top:6px">Eleven slabs per object along a fixed direction,
+separated and viewed from two elevations. The peel keeps its thickness from slab to slab and the
+segment boundaries line up across the gaps; the watermelon's rind, pith and flesh stay in the same
+order at every depth. The doughnut is the clearest case: every one of its slabs is <em>two</em>
+disjoint pieces except at the two ends, which is what cutting a ring across its axis has to give,
+and nothing in the pipeline is told the object has a hole.</figcaption>
 
 <h3 id="fidelity">Interior fidelity</h3>
 <figure><img src="assets/sweep_compare.png" alt="The same six depths from both models">
