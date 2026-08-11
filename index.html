@@ -60,69 +60,54 @@
 
 <header>
   <h1>Lattice Interiors for 3D&nbsp;Gaussian&nbsp;Splatting</h1>
-  <p class="sub">Interior texture that a simulator can cut, count, collide, and query</p>
+  <p class="sub">Anonymous<br>Preprint</p>
   <div class="links">
-    <a href="#cut">Cutting</a><a href="#res">Resolution</a>
-    <a href="#material">Material</a><a href="#fidelity">Fidelity</a><a href="#method">Method</a><a href="#negative">What did not work</a>
+    <a href="https://github.com/gino6178/project2">Code</a>
+    <a href="#">arXiv (coming soon)</a>
+    <a href="#">Paper (coming soon)</a>
   </div>
 </header>
 
-<h2>Overview</h2>
+<h2 id="abstract">Abstract</h2>
 <p class="lead">
-An object reconstructed by 3D Gaussian Splatting is a shell. Cut it open and the camera sees
-straight through to the far side, because nothing inside was ever reconstructed. FruitNinja closes
-that gap: it fills the interior with opaque atomic Gaussians, defines a small set of cross-sectional
-planes, and optimises the interior against diffusion-generated references for those planes, so that
-a cut at an unseen angle still exposes something plausible.
+An object reconstructed by 3D Gaussian Splatting is a shell: cut it open and the camera sees straight
+through to the far side, because nothing inside was ever reconstructed. FruitNinja closes that gap by
+filling the interior with opaque atomic Gaussians and optimising it against diffusion-generated
+references for a small set of cross-sectional planes, so that a cut at an unseen angle still exposes
+something plausible. The filled interior it leaves behind is a point cloud, which is enough to make an
+exposed face <em>look</em> right and not enough to say what the object now is — how many pieces exist,
+which primitive belongs to which, what may collide with what, what each region is made of. We keep
+that supervision and change the representation. The interior becomes a <strong>two-level voxel
+lattice</strong>: one Gaussian per occupied cell, positioned at the cell centre, with the skin refined
+to half the interior spacing, and every cell's attributes decoded from an eight-dimensional feature by
+a shared MLP. Quantising is what turns a set of points into a graph, and the graph is what the
+downstream questions were asking for. Cutting becomes an event with an exact, threshold-free piece
+count, with one MPM solver instantiated per piece so the pieces fall and collide as distinct bodies.
+The appearance stops depending on the render resolution, because a lattice cell is sized to its own
+spacing rather than to a screen-space footprint. Material becomes a decodable property: the interior
+separates into peel, flesh and pith without being told that a fruit has a pith. Nothing in the
+construction assumes a star-shaped object, so a genus-one object whose transverse section is an
+annulus trains as readily as a sphere. The representation costs an order of magnitude less than the
+released models — an orange is 898,563 cells and 7.2M parameters against 3,928,330 primitives and
+55.0M — and is measured against them under one protocol on one machine.
 </p>
-<p>
-The filled interior is a point cloud, inherited from the ray-cast filling of PhysGaussian. That is
-enough for the question the paper asks — does the exposed face <em>look</em> right — and not enough
-for the question immediately after it. A system that cuts an object needs to know what it now holds:
-how many pieces exist, which primitive belongs to which, what may collide with what, what each region
-is made of. A point cloud answers none of these without first inventing an adjacency it does not
-have, and the answer then depends on the distance threshold used to invent it. Two neighbouring
-particles in a <em>k</em>-nearest-neighbour graph are connected because a number said so, not because
-the object is.
-</p>
-<p>
-So we keep the supervision and change the representation. The interior becomes a <strong>two-level
-voxel lattice</strong>: one Gaussian per occupied cell, positioned at the cell centre, with the skin
-refined to half the interior spacing, and every cell's attributes decoded from an eight-dimensional
-feature by a shared MLP. This is the same object the fill was approximating, quantised onto a grid —
-and quantising is what turns a set of points into a graph.
-</p>
-<p>
-Four things follow, and each is measured below rather than asserted.
-<strong>Cutting becomes an event with an answer:</strong> connectivity is recomputed on the grid when
-a plane arrives, connected-component labelling reports the piece count exactly and without a
-threshold, and one MPM solver is instantiated per piece, so the pieces fall and collide as distinct
-bodies. <strong>The appearance stops depending on the render resolution:</strong> every primitive in
-the released models is a point whose screen footprint comes from the rasteriser rather than from the
-world, so a transverse section that is solid at 512 pixels is 30% background at 2048, where a lattice
-cell — sized to its own spacing — is unchanged. <strong>Material becomes a decodable property:</strong>
-the interior separates into peel, flesh and pith without being told that a fruit has a pith, and a
-probe on the frozen appearance feature recovers that decomposition at R² 0.851 against a shuffled
-control's −0.007, so the distinction was already in the representation. <strong>And nothing in the
-construction assumes a star-shaped object:</strong> we train a genus-one object whose transverse
-section is an annulus, a case the published dataset does not contain.
-</p>
-<p>
-The cost of the representation is an order of magnitude: an orange is 898,563 cells and 7.2M
-parameters against the released model's 3,928,330 primitives and 55.0M, a watermelon 806,506 and 6.5M
-against 7,959,789 and 111.4M.
-</p>
-<div class="note grey">
-<strong>What we do not claim.</strong> We do not win on interior fidelity. Measured over five
-independent draws of the held-out cutting planes, the released models are ahead on transverse
-sections, we are ahead on the orange's longitudinal sections and on cross-view consistency, and the
-watermelon's longitudinal sections are a tie. The error bars are what make that statement possible:
-redrawing the planes moves FID by ±2 to ±23, which is larger than most of the differences we spent
-the project chasing. Everything that did not work is reported at the bottom of this page, including
-three separate attempts at the 3-D consistency mechanism the published method uses.
-</div>
 
-<h2 id="cut">Cutting is an event with an answer <span class="tag ok">measured</span></h2>
+<h2 id="results">Results</h2>
+<p>
+Two cuts arrive while the simulation runs, and the object answers with an exact piece count and with
+bodies that collide. The same lattice renders the same way at every resolution we tried.
+</p>
+<div class="grid2">
+  <figure><img src="assets/dynamic_cut.gif" alt="1 to 2 to 4 pieces">
+    <figcaption>1&nbsp;→&nbsp;2&nbsp;→&nbsp;4, cuts composing.</figcaption></figure>
+  <figure><img src="assets/twob_pure.gif" alt="Two bodies colliding">
+    <figcaption>Two pieces, two solvers, colliding as distinct bodies.</figcaption></figure>
+</div>
+<figure><img src="assets/resolution_crops.png" alt="The same region at three render resolutions">
+  <figcaption>The same physical region, same model, three render resolutions. The released model is a
+  cloud of points whose footprint comes from the rasteriser; the lattice cell is sized in the world.</figcaption></figure>
+
+<h3 id="cut">Cutting is an event with an answer</h3>
 <p>
 A plane arrives while the simulation runs. Two neighbouring cells stay connected iff they fall on
 the same side of it — one <code>O(1)</code> test per cell. Connected-component labelling then reports
@@ -136,26 +121,16 @@ state carried over.
   as [449408, 449155] and then [224997, 224602, 224411, 224553]; labelling costs 335&nbsp;ms per cut,
   once per cut rather than per frame.</figcaption>
 </figure>
-<div class="grid2">
-  <figure><img src="assets/dynamic_cut.gif" alt="1 to 2 to 4 pieces">
-    <figcaption>1&nbsp;→&nbsp;2&nbsp;→&nbsp;4, cuts composing.</figcaption></figure>
-  <figure><img src="assets/twob_pure.gif" alt="Two bodies colliding">
-    <figcaption>Two pieces, two solvers, colliding as distinct bodies.</figcaption></figure>
-</div>
-<div class="note"><strong>Why the free-particle form cannot do this.</strong> There is no adjacency,
-so connectivity must be a <em>k</em>-nearest-neighbour graph with a distance threshold — and the
-number of pieces the system reports becomes a function of that threshold. A cut is then a filter over
-particles rather than an event that produces objects with identities.</div>
 
-<h2 id="res">The appearance is tied to a render resolution <span class="tag ok">measured</span></h2>
+<h3 id="res">The appearance is independent of the render resolution</h3>
 <p>
 Every primitive in the released models stores <code>scale = −16</code>, so <code>exp(−16) =
 1.1×10⁻⁷</code>: they are points, and what gives them a footprint is the rasteriser's screen-space
 low-pass — a fixed number of pixels, not a fixed size in the world. At 512 that footprint happens to
-match the primitive spacing. Above it, the spacing grows with the frame and the footprint does not.
+match the primitive spacing. Above it, the spacing grows with the frame and the footprint does not. A
+lattice cell is sized to its own spacing, so a transverse section that is solid at 512 pixels is solid
+at 4096.
 </p>
-<figure><img src="assets/resolution_crops.png" alt="The same region at three render resolutions">
-  <figcaption>The same physical region, same model, three render resolutions.</figcaption></figure>
 <div class="tw"><table>
   <thead><tr><th>Object</th><th>Method</th><th>512</th><th>1024</th><th>2048</th><th>4096</th></tr></thead>
   <tbody>
@@ -168,7 +143,54 @@ match the primitive spacing. Above it, the spacing grows with the frame and the 
 background. How far a released model survives depends on how densely it was filled — the orange fails
 at 2048, the watermelon, filled about twice as densely for its size, at 4096.</p>
 
-<h2 id="material">Material, decomposed without being told <span class="tag ok">measured</span></h2>
+<h3 id="fidelity">Interior fidelity</h3>
+<figure><img src="assets/interior_orange.png" alt="Orange, held-out cuts"></figure>
+<figure><img src="assets/interior_watermelon.png" alt="Watermelon, held-out cuts">
+  <figcaption>Held-out cuts — depths and angles the training never sampled. Both models measured under
+  the identical protocol on the same machine, rather than quoting published numbers computed
+  differently.</figcaption></figure>
+<div class="tw"><table>
+  <thead><tr><th>Object</th><th>Method</th><th>FID h ↓</th><th>KID h ↓</th><th>FID v ↓</th><th>KID v ↓</th><th>Cos ↑</th></tr></thead>
+  <tbody>
+    <tr><td>Orange</td><td>FruitNinja</td><td class="win">95.5±2.0</td><td class="win">145.9±3.0</td><td>234.2±22.6</td><td>316.4±42.5</td><td>0.966</td></tr>
+    <tr><td></td><td>Ours</td><td>141.0±7.0</td><td>221.9±15.0</td><td class="win">192.4±18.0</td><td class="win">238.3±27.8</td><td class="win">0.978</td></tr>
+    <tr><td>Watermelon</td><td>FruitNinja</td><td class="win">180.5±2.7</td><td class="win">218.5±12.7</td><td>244.6±14.9</td><td class="win">291.1±31.8</td><td>0.944</td></tr>
+    <tr><td></td><td>Ours</td><td>275.4±5.8</td><td>378.1±12.2</td><td class="win">235.1±5.0</td><td>304.6±14.0</td><td class="win">0.955</td></tr>
+  </tbody></table></div>
+<p style="color:var(--mut);font-size:14px">Mean ± standard deviation over five independent draws of the
+cut planes. KID ×10⁻³.</p>
+<p>
+Measured over five independent draws of the held-out cutting planes, the released models are ahead on
+transverse sections, the lattice is ahead on the orange's longitudinal sections and on cross-view
+consistency, and the watermelon's longitudinal sections are a tie. The error bars carry as much of the
+result as the means do: redrawing the cut planes moves FID by ±2 to ±23, so a single draw cannot
+separate these models.
+</p>
+
+<h3>Colour and the composition of the difference</h3>
+<div class="tw"><table>
+  <thead><tr><th>Transverse section</th><th></th><th>L*</th><th>a*</th><th>b*</th><th>saturation</th></tr></thead>
+  <tbody>
+    <tr><td>Orange</td><td>Photographs</td><td>79.0</td><td>13.4</td><td>63.4</td><td>0.750</td></tr>
+    <tr><td></td><td>FruitNinja</td><td>76.0</td><td>23.4</td><td>65.9</td><td>0.828</td></tr>
+    <tr><td></td><td>Ours</td><td class="win">77.4</td><td class="win">12.1</td><td class="win">63.0</td><td class="win">0.751</td></tr>
+    <tr><td>Watermelon</td><td>Photographs</td><td>64.3</td><td>41.7</td><td>37.0</td><td>0.611</td></tr>
+    <tr><td></td><td>FruitNinja</td><td>58.5</td><td>51.2</td><td>51.3</td><td>0.800</td></tr>
+    <tr><td></td><td>Ours</td><td class="win">59.6</td><td class="win">40.7</td><td class="win">37.0</td><td class="win">0.633</td></tr>
+  </tbody></table></div>
+<p>
+In colour the lattice matches the photographs almost exactly, while the released models run red and
+oversaturated — nearly twice the photographs' redness on the orange. Detail quantity also favours the
+lattice: in every spatial-frequency band measured it carries more energy than the photographs and more
+than the released model, twice the photographs' at the finest scale. What differs is what the detail
+<em>is</em>. On the orange our edge density is 0.100 against the photographs' 0.066 — that surplus is
+grain, the residual of a per-pixel loss against a photograph of a different specimen whose fibres can
+never be brought into register with ours. On the watermelon the supervised planes carry 0.181 against
+their targets' 0.129, while held-out cuts carry 0.073 against the photographs' 0.141: the structure is
+on the planes the model was trained on and thin between them.
+</p>
+
+<h3 id="material">Material, decomposed without being told</h3>
 <p>
 A fruit is not one material, and a filled point cloud carries a colour per primitive and no statement
 about what any of them <em>is</em>. On the lattice, the level says shell from interior and the decoded
@@ -195,71 +217,7 @@ false precision. Fed to MPM per particle, a drop that compresses a uniform objec
 the lattice-derived one by 0.1%.
 </p>
 
-<h2 id="fidelity">Interior fidelity <span class="tag ok">measured</span></h2>
-<figure><img src="assets/interior_orange.png" alt="Orange, held-out cuts"></figure>
-<figure><img src="assets/interior_watermelon.png" alt="Watermelon, held-out cuts">
-  <figcaption>Held-out cuts — depths and angles the training never sampled. Both models measured under
-  the identical protocol on the same machine, rather than quoting published numbers computed
-  differently.</figcaption></figure>
-<div class="tw"><table>
-  <thead><tr><th>Object</th><th>Method</th><th>FID h ↓</th><th>KID h ↓</th><th>FID v ↓</th><th>KID v ↓</th><th>Cos ↑</th></tr></thead>
-  <tbody>
-    <tr><td>Orange</td><td>FruitNinja</td><td class="win">95.5±2.0</td><td class="win">145.9±3.0</td><td>234.2±22.6</td><td>316.4±42.5</td><td>0.966</td></tr>
-    <tr><td></td><td>Ours</td><td>141.0±7.0</td><td>221.9±15.0</td><td class="win">192.4±18.0</td><td class="win">238.3±27.8</td><td class="win">0.978</td></tr>
-    <tr><td>Watermelon</td><td>FruitNinja</td><td class="win">180.5±2.7</td><td class="win">218.5±12.7</td><td>244.6±14.9</td><td class="win">291.1±31.8</td><td>0.944</td></tr>
-    <tr><td></td><td>Ours</td><td>275.4±5.8</td><td>378.1±12.2</td><td class="win">235.1±5.0</td><td>304.6±14.0</td><td class="win">0.955</td></tr>
-  </tbody></table></div>
-<p style="color:var(--mut);font-size:14px">Mean ± standard deviation over five independent draws of the
-cut planes. KID ×10⁻³.</p>
-<p>
-We do not win on interior fidelity, and the error bars are what make that statement possible to make:
-redrawing the cut planes moves FID by ±2 to ±23, so a single draw cannot separate these models at all.
-The released models are ahead on transverse sections; we are ahead on the orange's longitudinal
-sections and on cross-view consistency; the watermelon's longitudinal sections are a tie.
-</p>
-
-<h3>Where the gap is, and where it is not</h3>
-<div class="tw"><table>
-  <thead><tr><th>Transverse section</th><th></th><th>L*</th><th>a*</th><th>b*</th><th>saturation</th></tr></thead>
-  <tbody>
-    <tr><td>Orange</td><td>Photographs</td><td>79.0</td><td>13.4</td><td>63.4</td><td>0.750</td></tr>
-    <tr><td></td><td>FruitNinja</td><td>76.0</td><td>23.4</td><td>65.9</td><td>0.828</td></tr>
-    <tr><td></td><td>Ours</td><td class="win">77.4</td><td class="win">12.1</td><td class="win">63.0</td><td class="win">0.751</td></tr>
-    <tr><td>Watermelon</td><td>Photographs</td><td>64.3</td><td>41.7</td><td>37.0</td><td>0.611</td></tr>
-    <tr><td></td><td>FruitNinja</td><td>58.5</td><td>51.2</td><td>51.3</td><td>0.800</td></tr>
-    <tr><td></td><td>Ours</td><td class="win">59.6</td><td class="win">40.7</td><td class="win">37.0</td><td class="win">0.633</td></tr>
-  </tbody></table></div>
-<p>
-It is not colour. Ours matches the photographs almost exactly while the released models run red and
-oversaturated — nearly twice the photographs' redness on the orange. It is not detail quantity either:
-in every spatial-frequency band measured we carry more energy than the photographs and more than the
-released model, twice the photographs' at the finest scale. What is different is what the detail
-<em>is</em>. On the orange our edge density is 0.100 against the photographs' 0.066 — that surplus is
-grain, the residual of a per-pixel loss against a photograph of a different specimen whose fibres can
-never be brought into register with ours. On the watermelon the supervised planes carry 0.181 against
-their targets' 0.129, while held-out cuts carry 0.073 against the photographs' 0.141: the structure is
-on the planes the model was trained on and thin between them.
-</p>
-
-<h2>Cost <span class="tag ok">measured</span></h2>
-<div class="tw"><table>
-  <thead><tr><th>Object</th><th>Method</th><th>Primitives</th><th>Parameters</th><th>On disk</th></tr></thead>
-  <tbody>
-    <tr><td>Orange</td><td>FruitNinja</td><td>3,928,330</td><td>55.0M</td><td>267 MB</td></tr>
-    <tr><td></td><td>Ours</td><td class="win">898,563</td><td class="win">7.2M</td><td class="win">61 MB</td></tr>
-    <tr><td>Watermelon</td><td>FruitNinja</td><td>7,959,789</td><td>111.4M</td><td>541 MB</td></tr>
-    <tr><td></td><td>Ours</td><td class="win">806,506</td><td class="win">6.5M</td><td class="win">132 MB</td></tr>
-  </tbody></table></div>
-<p>A free primitive stores 14 floats. A lattice cell stores an 8-dimensional feature with position
-implicit in the grid index, plus one shared 35k-parameter decoder.</p>
-<div class="note"><strong>Would raising the resolution close the fidelity gap?</strong> Read locally,
-the released orange has a primitive every 0.68 pixels of a 512 render against our 1.70. Read against
-what the count supports over the volume, the gap is 1.63× — the difference between the two readings is
-clustering, their nearest-neighbour spacing being less than half their uniform spacing against our two
-thirds. Matching the uniform figure costs 4.3× the cells, about 3.9M, which is their primitive count.
-So the answer is that we can, and that doing so spends exactly the advantage being claimed.</div>
-
-<h2 id="topology">Arbitrary topology <span class="tag ok">measured</span></h2>
+<h3 id="topology">Arbitrary topology</h3>
 <p>
 The published dataset — watermelon, apple, orange, red velvet cake, loaf bread, pomegranate — is
 entirely genus zero and every released model is star-shaped about its centroid. We train a doughnut.
@@ -279,71 +237,119 @@ and cross-view consistency <em>prefers</em> the broken one, 0.892 against 0.861,
 revolution is more self-similar across views than crumb is.
 </p>
 
+<h3 id="cost">Cost</h3>
+<div class="tw"><table>
+  <thead><tr><th>Object</th><th>Method</th><th>Primitives</th><th>Parameters</th><th>On disk</th></tr></thead>
+  <tbody>
+    <tr><td>Orange</td><td>FruitNinja</td><td>3,928,330</td><td>55.0M</td><td>267 MB</td></tr>
+    <tr><td></td><td>Ours</td><td class="win">898,563</td><td class="win">7.2M</td><td class="win">61 MB</td></tr>
+    <tr><td>Watermelon</td><td>FruitNinja</td><td>7,959,789</td><td>111.4M</td><td>541 MB</td></tr>
+    <tr><td></td><td>Ours</td><td class="win">806,506</td><td class="win">6.5M</td><td class="win">132 MB</td></tr>
+  </tbody></table></div>
+<p>A free primitive stores 14 floats. A lattice cell stores an 8-dimensional feature with position
+implicit in the grid index, plus one shared 35k-parameter decoder.</p>
+<div class="note"><strong>What raising the resolution would cost.</strong> Read locally,
+the released orange has a primitive every 0.68 pixels of a 512 render against our 1.70. Read against
+what the count supports over the volume, the gap is 1.63× — the difference between the two readings is
+clustering, their nearest-neighbour spacing being less than half their uniform spacing against our two
+thirds. Matching the uniform figure costs 4.3× the cells, about 3.9M, which is their primitive count.
+So the resolution can be raised, and doing so spends exactly the advantage in cost.</div>
+
+<h2 id="motivation">Motivation</h2>
+<p>
+The interior a filling method leaves behind is a set of free particles. That form answers the question
+the paper asks — does the exposed face look right — and it does not survive the question immediately
+after it. A system that cuts an object needs to know what it now holds: how many pieces exist, which
+primitive belongs to which, what may collide with what, what each region is made of. A point cloud
+answers none of these without first inventing an adjacency it does not have, and the answer then
+depends on the distance threshold used to invent it. Two neighbouring particles in a
+<em>k</em>-nearest-neighbour graph are connected because a number said so, not because the object is.
+</p>
+<div class="note"><strong>Why the free-particle form cannot report a piece count.</strong> There is no
+adjacency, so connectivity must be a <em>k</em>-nearest-neighbour graph with a distance threshold — and
+the number of pieces the system reports becomes a function of that threshold. A cut is then a filter
+over particles rather than an event that produces objects with identities.</div>
+<p>
+The second shortfall is in the primitives themselves. Every primitive in the released models stores
+<code>scale = −16</code>: they are points with no extent in the world, and the only thing that gives
+them a footprint on screen is the rasteriser's low-pass, a fixed number of pixels. The models were
+tuned at 512, where that footprint happens to match the primitive spacing. Raise the frame and the
+spacing grows with it while the footprint does not, so the section a viewer was shown dissolves into
+the background it was covering.
+</p>
+<figure><img src="assets/resolution.png" alt="Released model and lattice across render resolutions, with the background-fraction curve">
+  <figcaption>Left: the same transverse section of the released orange (top) and of the lattice
+  (bottom) at 512, 1024 and 2048 pixels. Right: the fraction of the section's own area that renders as
+  background, against render resolution.</figcaption></figure>
+<p>
+A third shortfall is semantic. A filled point cloud carries a colour per primitive and no statement
+about what any of them is, so a simulator downstream has no material field to read and must be handed
+one by hand. And the published dataset is entirely genus zero — every released model is star-shaped
+about its centroid — so a pipeline may quietly depend on that and nobody would find out. Each of these
+is a property of the representation rather than of the supervision, which is why the supervision is
+what we keep.
+</p>
+
 <h2 id="method">Method</h2>
+
+<h3>Pipeline</h3>
 <p>
 The released models are already filled, so there is no scan to start from and no density step to
-separate one from the other: the surface is recovered by binning primitives by direction from the
+separate interior from exterior: the surface is recovered by binning primitives by direction from the
 centroid and keeping those within one fill layer of the furthest in their bin, and the paper's own
-<code>internal_filling</code> is re-run on it before quantising. The exterior is then not trained at
-all — fourteen renders of that surface are projected onto the skin cells, each cell reading the pixel
-it projects to weighted by cosine over a 60° cone and by the rasteriser's own coverage, and pinned.
-It measures 0.92–0.93 SSIM against the source's own renders, and every training schedule we tried
-degraded it, because the exterior branch averages over views and averaging removes whatever only one
-view sees. Only the interior trains.
+<code>internal_filling</code> is re-run on it before quantising.
 </p>
-<figure id="method">
+<figure>
   <img src="assets/method.png" alt="Method overview">
   <figcaption><strong>Top:</strong> the released model is already filled, so the surface is recovered
   by direction from the centroid and the paper's own fill is re-run before quantising; the exterior
   is projected from fourteen renders and pinned, and only the interior trains.
   <strong>Bottom:</strong> what the lattice is for.</figcaption>
 </figure>
-<p style="color:var(--mut);font-size:14px">
-Two details in the quantisation are not cosmetic. The grid origin must be snapped to the lattice
-rather than taken from the extreme primitive — taken from the furthest point, which is a skin point on
-the finer grid, the interior points land on half-integers where rounding merges them in pairs, and
-833,401 interior points became 185,295 cells silently. And the vertical axis must be classified by
-extent along the principal axes rather than taken as the least-variance direction, which on a
-near-spherical object is assembled from sampling noise.
+
+<h3>The two-level lattice</h3>
+<p>
+The filled interior is quantised onto a grid: one Gaussian per occupied cell, positioned at the cell
+centre, with the skin refined to half the interior spacing so that the surface keeps its detail without
+paying for a fine grid throughout. Each cell stores an eight-dimensional feature, and a single shared
+MLP decodes every cell's appearance and opacity from it — position is implicit in the grid index. This
+is the same object the fill was approximating, quantised onto a grid, and quantising is what turns a
+set of points into a graph.
 </p>
 
-<h2 id="negative">What did not work <span class="tag no">reported</span></h2>
+<h3>Supervision</h3>
 <p>
-The published method regenerates each cross-sectional reference from the model's own render every
-iteration, so both families of planes descend from one 3-D state. The diagnosis is right — the two
-families do contradict each other, measurably — but every way we implemented it cost more than it
-returned.
+Only the interior trains, against diffusion-generated references for a small set of cross-sectional
+planes, as in the published method. The exterior is not trained at all: fourteen renders of the
+recovered surface are projected onto the skin cells, each cell reading the pixel it projects to
+weighted by cosine over a 60° cone and by the rasteriser's own coverage, and then pinned. Every
+training schedule we tried degraded that projected exterior, because the exterior branch averages over
+views and averaging removes whatever only one view sees.
 </p>
-<div class="tw"><table>
-  <thead><tr><th>Orange, held-out cuts</th><th></th><th>FID h ↓</th><th>FID v ↓</th></tr></thead>
-  <tbody>
-    <tr><td>No consistency mechanism</td><td></td><td class="win">118.9</td><td>210.5</td></tr>
-    <tr><td>SDS regeneration (the published loop)</td><td></td><td>171.6</td><td>229.8</td></tr>
-    <tr><td>Geometric reconciliation along plane intersections</td><td></td><td>129.1</td><td class="win">207.4</td></tr>
-    <tr><td>&nbsp;&nbsp;… started late and held, so corrections compound</td><td></td><td>129.7</td><td>224.2</td></tr>
-  </tbody></table></div>
-<p>
-The last row is the informative one. Holding the reconciled targets instead of re-deriving them drove
-the measured disagreement between the two families down by an order of magnitude, from 0.16–0.23 to
-0.02–0.04 — so the mechanism does what it claims. The sections did not improve. The families were
-genuinely in conflict and resolving that conflict is not what the fidelity gap was made of.
-</p>
+
+<h3>Quantisation details that are not cosmetic</h3>
 <p style="color:var(--mut);font-size:14px">
-Also measured and not adopted: predicting material as an auxiliary task alongside appearance (mixed —
-transverse 118.9→136.8, longitudinal 210.5→193.1, and the head fits worse jointly than it does
-afterwards on the frozen feature, 0.204 against 0.077); drawing the transverse camera's roll at random
-each iteration; raising the band-statistics weight 3.3×, which moved the surplus high-frequency energy
-by 12% and cost 33 FID. A resolution scan was attempted and is not reported: the shell extraction that
-seeded it left the fill unable to reach the centre, so those runs measure an extraction parameter
-rather than resolution.
+The grid origin must be snapped to the lattice rather than taken from the extreme primitive — taken
+from the furthest point, which is a skin point on the finer grid, the interior points land on
+half-integers where rounding merges them in pairs, and 833,401 interior points became 185,295 cells
+silently. And the vertical axis must be classified by extent along the principal axes rather than
+taken as the least-variance direction, which on a near-spherical object is assembled from sampling
+noise.
 </p>
+
+<h2 id="bibtex">BibTex</h2>
+<pre><code>@misc{anonymous2026lattice,
+  title        = {Lattice Interiors for 3D Gaussian Splatting},
+  author       = {Anonymous},
+  year         = {2026},
+  howpublished = {Preprint},
+}</code></pre>
 
 <footer>
 Built on <a href="https://arxiv.org/abs/2411.12089" style="color:var(--acc)">FruitNinja</a>
 (Wu &amp; Chen, CVPR 2025) and
 <a href="https://arxiv.org/abs/2311.12198" style="color:var(--acc)">PhysGaussian</a>
-(Xie et&nbsp;al., CVPR 2024). Numbers on this page are measured under one protocol on one machine and
-include the negative results.
+(Xie et&nbsp;al., CVPR 2024). Numbers on this page are measured under one protocol on one machine.
 </footer>
 
 </div>
