@@ -71,48 +71,26 @@
 
 <h2 id="abstract">Abstract</h2>
 <p class="lead">
-An object reconstructed by 3D Gaussian Splatting is a shell of free-floating primitives: cut it and
-the camera sees through to the far side, and the primitives themselves carry a colour and nothing
-else. FruitNinja fills the interior and supervises it against diffusion-generated cross-sections, so
-that a cut at an unseen angle exposes something plausible — which makes an exposed face
-<em>look</em> right without making the object into something a system can ask questions of. How many
-pieces exist after a cut, which primitive belongs to which, what may collide with what, what each
-region is made of: a point cloud answers none of these without first inventing an adjacency it does
-not have, and the answer then depends on the threshold used to invent it.
-</p>
-<p>
-We keep that supervision and put the <em>whole object</em> — interior and skin alike — on a
-<strong>two-level voxel lattice</strong>: one Gaussian per occupied cell, at the cell centre, the
-skin refined to half the interior spacing, and every cell's attributes decoded from an
-eight-dimensional feature by a shared MLP. Quantising is what turns a set of points into a graph, and
-the graph is what the downstream questions were asking for.
-</p>
-<p>
-Three things follow, and the same eight numbers per cell carry all of them.
-<strong>Cutting becomes an event with an answer:</strong> connectivity is recomputed on the grid when
-a plane arrives, connected-component labelling returns the piece count exactly and without a
-threshold, and one MPM solver is instantiated per piece, so the pieces fall and collide as distinct
-bodies. <strong>Material becomes a decodable property:</strong> the object separates into peel, flesh
-and pith without being told that a fruit has a pith, a probe on the frozen appearance feature recovers
-that decomposition at R² 0.851 against a shuffled control's −0.007, and feeding the per-cell moduli to
-the solver changes the dynamics measurably — a drop that compresses a uniform object by 4.2%
-compresses the decomposed one by 0.1%. <strong>And the appearance stops depending on the resolution it
-is rendered at:</strong> a lattice cell is sized to its own spacing rather than to the rasteriser's
-screen-space footprint, so a transverse section that is solid at 512 pixels is still solid at 4096
-where the released models are a third background.
-</p>
-<p>
-Nothing in the construction assumes a star-shaped object, so a genus-one object whose transverse
-section is an annulus trains as readily as a sphere. The representation costs an order of magnitude
-less than the released models — an orange is 898,563 cells and 7.2M parameters against 3,928,330
-primitives and 55.0M — and interior fidelity is measured against them on held-out cuts under one
-protocol on one machine.
+Generating an object's interior so that cutting it open reveals something plausible has been posed as
+a texture problem, and solved as one: the interior becomes a cloud of free-floating primitives, each
+carrying a colour and nothing else. We keep that supervision and change the representation, putting
+the whole object — interior and skin alike — on a two-level voxel lattice with one Gaussian per
+occupied cell and every cell's attributes decoded from an eight-dimensional feature. Quantising is
+what turns a set of points into a graph, and three properties follow from the same eight numbers per
+cell. A cut is answered by exact, threshold-free connected-component labelling, so the pieces are
+enumerated and each becomes its own simulated body. Material becomes decodable: the object separates
+into peel, flesh and pith without supervision, and a probe on the frozen appearance feature recovers
+that decomposition at <em>R</em>² 0.851 against a shuffled control's −0.007. And the appearance stops
+depending on the resolution it is rendered at, because a cell is sized to its own spacing rather than
+to a screen-space footprint. The representation costs four to ten times fewer primitives and eight to
+seventeen times fewer parameters than the released models, gives up no fine-scale detail at the
+resolution the comparison is made, and keeps it where those models lose it.
 </p>
 
 <h2 id="intro">Introduction</h2>
 <p>
-An object reconstructed by 3D Gaussian Splatting is a shell. Cut it and the camera sees through to
-the far side, because nothing inside was ever reconstructed. FruitNinja closes that gap: it fills the
+Cutting open a reconstructed object exposes nothing, because a 3D Gaussian Splatting model is a
+shell and nothing inside it was ever reconstructed. FruitNinja closes that gap: it fills the
 interior with opaque atomic Gaussians, defines a small set of cross-sectional planes, and optimises
 the interior against diffusion-generated references for those planes, so that a cut at an unseen
 angle still exposes something plausible.
@@ -258,7 +236,7 @@ taken as the least-variance direction, which on a near-spherical object is assem
 noise.
 </p>
 
-<h2 id="summary">At a glance</h2>
+<h2 id="results">Results</h2>
 <p>
 The representation is an order of magnitude cheaper, keeps at least as much fine-scale detail at the
 resolution the comparison is made, keeps it where the released models lose it, and carries a material
@@ -288,7 +266,7 @@ transverse section at the lowest band, and the fraction of a section's own area 
 background when the same model is rendered larger.
 </p>
 
-<h2 id="results">Results</h2>
+
 <p>
 Two cuts arrive while the simulation runs, and the object answers with an exact piece count and with
 bodies that collide. The same lattice renders the same way at every resolution we tried.
@@ -462,8 +440,7 @@ while making the object something a system can query. The piece count after a cu
 rather than a threshold choice, one MPM solver per piece follows directly and the pieces collide;
 material becomes a property the same feature decodes, decomposed without supervision; the appearance
 stops depending on the resolution it is rendered at; and neither the lattice nor the supervision
-assumes the object is star-shaped. The representation costs four to ten times fewer primitives and
-eight to seventeen times fewer parameters than the released models.
+assumes the object is star-shaped.
 </p>
 <p>
 <strong>Limitations.</strong> Transverse sections score below the released models on both objects,
@@ -480,7 +457,8 @@ what the dataset provides and is too few for these metrics to separate close res
 
 <h2 id="bibtex">BibTex</h2>
 <pre><code>@misc{anonymous2026lattice,
-  title        = {Lattice Interiors for 3D Gaussian Splatting},
+  title  = {Voxel-Lattice Gaussians: Cutting, Collision and Material
+            from One Representation},
   author       = {Anonymous},
   year         = {2026},
   howpublished = {Preprint},
