@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lattice Interiors for 3D Gaussian Splatting</title>
+<style>
+  :root{ --ink:#1a1a1a; --mut:#6b6b6b; --line:#e4e4e4; --acc:#b3452b; --neg:#7a7a7a;
+         --bg:#fff; --panel:#fafafa; }
+  @media (prefers-color-scheme: dark){
+    :root{ --ink:#e8e8e8; --mut:#a0a0a0; --line:#333; --acc:#e2795c; --neg:#8f8f8f;
+           --bg:#141414; --panel:#1c1c1c; } }
+  :root[data-theme="dark"]{ --ink:#e8e8e8; --mut:#a0a0a0; --line:#333; --acc:#e2795c;
+           --neg:#8f8f8f; --bg:#141414; --panel:#1c1c1c; }
+  :root[data-theme="light"]{ --ink:#1a1a1a; --mut:#6b6b6b; --line:#e4e4e4; --acc:#b3452b;
+           --neg:#7a7a7a; --bg:#fff; --panel:#fafafa; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       -webkit-font-smoothing:antialiased}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  header{padding:60px 0 32px;border-bottom:1px solid var(--line);text-align:center}
+  h1{font-size:clamp(26px,4.2vw,38px);line-height:1.22;margin:0 0 8px;font-weight:650;letter-spacing:-.015em}
+  .sub{color:var(--mut);font-size:clamp(15px,2.2vw,18px);margin:0 0 24px}
+  .links{display:flex;gap:9px;justify-content:center;flex-wrap:wrap}
+  .links a{padding:7px 15px;border:1px solid var(--line);border-radius:999px;color:var(--ink);
+           text-decoration:none;font-size:14px;background:var(--panel)}
+  .links a:hover{border-color:var(--acc);color:var(--acc)}
+  h2{font-size:22px;margin:54px 0 6px;font-weight:640;letter-spacing:-.01em}
+  h2 .tag{font-size:12px;font-weight:600;padding:2px 8px;border-radius:4px;vertical-align:middle;
+          margin-left:9px;letter-spacing:.02em}
+  .ok{background:rgba(179,69,43,.12);color:var(--acc)}
+  .no{background:rgba(122,122,122,.15);color:var(--neg)}
+  h3{font-size:16px;margin:28px 0 6px;font-weight:640}
+  p{margin:0 0 14px} .lead{font-size:17px}
+  figure{margin:20px 0} figure img{width:100%;display:block;border-radius:6px;border:1px solid var(--line);background:#fff}
+  figcaption{color:var(--mut);font-size:13.5px;margin-top:8px;line-height:1.55}
+  .tw{overflow-x:auto;margin:16px 0}
+  table{border-collapse:collapse;width:100%;font-size:14px;min-width:540px}
+  th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right}
+  th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+  thead th{font-weight:640;border-bottom:1.5px solid var(--ink);white-space:nowrap}
+  tbody tr:hover{background:var(--panel)}
+  .win{color:var(--acc);font-weight:640}
+  .note{background:var(--panel);border-left:3px solid var(--acc);padding:12px 16px;
+        border-radius:0 5px 5px 0;font-size:14.5px;margin:18px 0;color:var(--mut)}
+  .note.grey{border-left-color:var(--neg)}
+  .note strong{color:var(--ink)}
+  pre{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:13px;
+      overflow-x:auto;font-size:13px;line-height:1.5}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  footer{margin:60px 0 44px;padding-top:20px;border-top:1px solid var(--line);color:var(--mut);font-size:13.5px}
+  ul{margin:0 0 14px;padding-left:22px} li{margin-bottom:6px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:640px){ .grid2{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Lattice Interiors for 3D&nbsp;Gaussian&nbsp;Splatting</h1>
+  <p class="sub">Interior texture that a simulator can cut, count, collide, and query</p>
+  <div class="links">
+    <a href="#method">Method</a><a href="#cut">Cutting</a><a href="#res">Resolution</a>
+    <a href="#material">Material</a><a href="#fidelity">Fidelity</a><a href="#negative">What did not work</a>
+  </div>
+</header>
+
+<h2>Overview</h2>
+<p class="lead">
+An object reconstructed by 3D Gaussian Splatting is a shell. FruitNinja fills the interior with
+free-floating opaque Gaussians and supervises them with a diffusion prior on a few cross-sectional
+planes. The rendered result is convincing and the representation is inert: an unordered point cloud,
+which a system that cuts the object cannot ask anything of.
+</p>
+<p>
+We keep the supervision and change the representation to a <strong>two-level voxel lattice</strong> —
+one Gaussian per occupied cell, coarse inside and refined at the skin, attributes decoded from a
+shared MLP. Adjacency is then free, and adjacency is what a cut needs.
+</p>
+<figure id="method">
+  <img src="assets/method.png" alt="Method overview">
+  <figcaption><strong>Top:</strong> the released model is already filled, so the surface is recovered
+  by direction from the centroid and the paper's own fill is re-run before quantising; the exterior
+  is projected from fourteen renders and pinned, and only the interior trains.
+  <strong>Bottom:</strong> what the lattice is for.</figcaption>
+</figure>
+
+<h2 id="cut">Cutting is an event with an answer <span class="tag ok">measured</span></h2>
+<p>
+A plane arrives while the simulation runs. Two neighbouring cells stay connected iff they fall on
+the same side of it — one <code>O(1)</code> test per cell. Connected-component labelling then reports
+how many pieces exist: exactly, with no threshold to choose. One MPM solver is built per piece with
+state carried over.
+</p>
+<figure>
+  <img src="assets/cutting.png" alt="Piece count and contacts over time">
+  <figcaption>Two cuts, at frames 20 and 95. The piece count (black) is not scripted — it is what the
+  labelling returns. Contacts (red) are zero while the object is one solid. The 898,563 cells divide
+  as [449408, 449155] and then [224997, 224602, 224411, 224553]; labelling costs 335&nbsp;ms per cut,
+  once per cut rather than per frame.</figcaption>
+</figure>
+<div class="grid2">
+  <figure><img src="assets/dynamic_cut.gif" alt="1 to 2 to 4 pieces">
+    <figcaption>1&nbsp;→&nbsp;2&nbsp;→&nbsp;4, cuts composing.</figcaption></figure>
+  <figure><img src="assets/twob_pure.gif" alt="Two bodies colliding">
+    <figcaption>Two pieces, two solvers, colliding as distinct bodies.</figcaption></figure>
+</div>
+<div class="note"><strong>Why the free-particle form cannot do this.</strong> There is no adjacency,
+so connectivity must be a <em>k</em>-nearest-neighbour graph with a distance threshold — and the
+number of pieces the system reports becomes a function of that threshold. A cut is then a filter over
+particles rather than an event that produces objects with identities.</div>
+
+<h2 id="res">The appearance is tied to a render resolution <span class="tag ok">measured</span></h2>
+<p>
+Every primitive in the released models stores <code>scale = −16</code>, so <code>exp(−16) =
+1.1×10⁻⁷</code>: they are points, and what gives them a footprint is the rasteriser's screen-space
+low-pass — a fixed number of pixels, not a fixed size in the world. At 512 that footprint happens to
+match the primitive spacing. Above it, the spacing grows with the frame and the footprint does not.
+</p>
+<figure><img src="assets/resolution_crops.png" alt="The same region at three render resolutions">
+  <figcaption>The same physical region, same model, three render resolutions.</figcaption></figure>
+<div class="tw"><table>
+  <thead><tr><th>Object</th><th>Method</th><th>512</th><th>1024</th><th>2048</th><th>4096</th></tr></thead>
+  <tbody>
+    <tr><td>Orange</td><td>FruitNinja</td><td>1.23%</td><td>5.19%</td><td>29.58%</td><td>—</td></tr>
+    <tr><td></td><td>Ours</td><td class="win">0.34%</td><td class="win">0.95%</td><td class="win">1.40%</td><td>—</td></tr>
+    <tr><td>Watermelon</td><td>FruitNinja</td><td>0.08%</td><td>0.14%</td><td>1.65%</td><td>28.95%</td></tr>
+    <tr><td></td><td>Ours</td><td class="win">0.01%</td><td class="win">0.03%</td><td class="win">0.02%</td><td class="win">0.02%</td></tr>
+  </tbody></table></div>
+<p style="color:var(--mut);font-size:14px">Fraction of a transverse section's own area that renders as
+background. How far a released model survives depends on how densely it was filled — the orange fails
+at 2048, the watermelon, filled about twice as densely for its size, at 4096.</p>
+
+<h2 id="material">Material, decomposed without being told <span class="tag ok">measured</span></h2>
+<p>
+A fruit is not one material, and a filled point cloud carries a colour per primitive and no statement
+about what any of them <em>is</em>. On the lattice, the level says shell from interior and the decoded
+appearance says what kind of interior. Clustering those, with classes merged when their appearance
+centroids agree so <em>K</em> is not chosen by hand, separates an orange into peel, flesh, a transition
+and pith — <strong>nothing is told that an orange has a pith</strong>.
+</p>
+<figure><img src="assets/material.png" alt="Material decomposition">
+  <figcaption>Transverse and longitudinal slabs, actual colour beside class colour. Red is the peel
+  (skin fraction 1.00); yellow is the pith and the central column.</figcaption></figure>
+<div class="tw"><table>
+  <thead><tr><th>Probe on the frozen 8-d appearance feature</th><th></th><th>MAE&nbsp;↓</th><th>R²&nbsp;↑</th><th>4-class accuracy&nbsp;↑</th></tr></thead>
+  <tbody>
+    <tr><td>Linear</td><td></td><td>0.2235</td><td>0.234</td><td>37.0%</td></tr>
+    <tr><td>2-layer</td><td></td><td>0.1359</td><td>0.695</td><td>62.9%</td></tr>
+    <tr><td>3-layer</td><td></td><td class="win">0.0767</td><td class="win">0.851</td><td class="win">79.2%</td></tr>
+    <tr><td>Control — shuffled target</td><td></td><td>0.2839</td><td>−0.007</td><td>14.4%</td></tr>
+  </tbody></table></div>
+<p>
+So the appearance latent already carries the material distinction, and not linearly. The relative
+field it predicts is dimensionless in [0,1]; the absolute scale comes from an order-of-magnitude
+range keyed by category, because appearance cannot supply a modulus and pretending otherwise would be
+false precision. Fed to MPM per particle, a drop that compresses a uniform object by 4.2% compresses
+the lattice-derived one by 0.1%.
+</p>
+
+<h2 id="fidelity">Interior fidelity <span class="tag ok">measured</span></h2>
+<figure><img src="assets/interior_orange.png" alt="Orange, held-out cuts"></figure>
+<figure><img src="assets/interior_watermelon.png" alt="Watermelon, held-out cuts">
+  <figcaption>Held-out cuts — depths and angles the training never sampled. Both models measured under
+  the identical protocol on the same machine, rather than quoting published numbers computed
+  differently.</figcaption></figure>
+<div class="tw"><table>
+  <thead><tr><th>Object</th><th>Method</th><th>FID h ↓</th><th>KID h ↓</th><th>FID v ↓</th><th>KID v ↓</th><th>Cos ↑</th></tr></thead>
+  <tbody>
+    <tr><td>Orange</td><td>FruitNinja</td><td class="win">95.5±2.0</td><td class="win">145.9±3.0</td><td>234.2±22.6</td><td>316.4±42.5</td><td>0.966</td></tr>
+    <tr><td></td><td>Ours</td><td>141.0±7.0</td><td>221.9±15.0</td><td class="win">192.4±18.0</td><td class="win">238.3±27.8</td><td class="win">0.978</td></tr>
+    <tr><td>Watermelon</td><td>FruitNinja</td><td class="win">180.5±2.7</td><td class="win">218.5±12.7</td><td>244.6±14.9</td><td class="win">291.1±31.8</td><td>0.944</td></tr>
+    <tr><td></td><td>Ours</td><td>275.4±5.8</td><td>378.1±12.2</td><td class="win">235.1±5.0</td><td>304.6±14.0</td><td class="win">0.955</td></tr>
+  </tbody></table></div>
+<p style="color:var(--mut);font-size:14px">Mean ± standard deviation over five independent draws of the
+cut planes. KID ×10⁻³.</p>
+<p>
+We do not win on interior fidelity, and the error bars are what make that statement possible to make:
+redrawing the cut planes moves FID by ±2 to ±23, so a single draw cannot separate these models at all.
+The released models are ahead on transverse sections; we are ahead on the orange's longitudinal
+sections and on cross-view consistency; the watermelon's longitudinal sections are a tie.
+</p>
+
+<h3>Where the gap is, and where it is not</h3>
+<div class="tw"><table>
+  <thead><tr><th>Transverse section</th><th></th><th>L*</th><th>a*</th><th>b*</th><th>saturation</th></tr></thead>
+  <tbody>
+    <tr><td>Orange</td><td>Photographs</td><td>79.0</td><td>13.4</td><td>63.4</td><td>0.750</td></tr>
+    <tr><td></td><td>FruitNinja</td><td>76.0</td><td>23.4</td><td>65.9</td><td>0.828</td></tr>
+    <tr><td></td><td>Ours</td><td class="win">77.4</td><td class="win">12.1</td><td class="win">63.0</td><td class="win">0.751</td></tr>
+    <tr><td>Watermelon</td><td>Photographs</td><td>64.3</td><td>41.7</td><td>37.0</td><td>0.611</td></tr>
+    <tr><td></td><td>FruitNinja</td><td>58.5</td><td>51.2</td><td>51.3</td><td>0.800</td></tr>
+    <tr><td></td><td>Ours</td><td class="win">59.6</td><td class="win">40.7</td><td class="win">37.0</td><td class="win">0.633</td></tr>
+  </tbody></table></div>
+<p>
+It is not colour. Ours matches the photographs almost exactly while the released models run red and
+oversaturated — nearly twice the photographs' redness on the orange. It is not detail quantity either:
+in every spatial-frequency band measured we carry more energy than the photographs and more than the
+released model, twice the photographs' at the finest scale. What is different is what the detail
+<em>is</em>. On the orange our edge density is 0.100 against the photographs' 0.066 — that surplus is
+grain, the residual of a per-pixel loss against a photograph of a different specimen whose fibres can
+never be brought into register with ours. On the watermelon the supervised planes carry 0.181 against
+their targets' 0.129, while held-out cuts carry 0.073 against the photographs' 0.141: the structure is
+on the planes the model was trained on and thin between them.
+</p>
+
+<h2>Cost <span class="tag ok">measured</span></h2>
+<div class="tw"><table>
+  <thead><tr><th>Object</th><th>Method</th><th>Primitives</th><th>Parameters</th><th>On disk</th></tr></thead>
+  <tbody>
+    <tr><td>Orange</td><td>FruitNinja</td><td>3,928,330</td><td>55.0M</td><td>267 MB</td></tr>
+    <tr><td></td><td>Ours</td><td class="win">898,563</td><td class="win">7.2M</td><td class="win">61 MB</td></tr>
+    <tr><td>Watermelon</td><td>FruitNinja</td><td>7,959,789</td><td>111.4M</td><td>541 MB</td></tr>
+    <tr><td></td><td>Ours</td><td class="win">806,506</td><td class="win">6.5M</td><td class="win">132 MB</td></tr>
+  </tbody></table></div>
+<p>A free primitive stores 14 floats. A lattice cell stores an 8-dimensional feature with position
+implicit in the grid index, plus one shared 35k-parameter decoder.</p>
+<div class="note"><strong>Would raising the resolution close the fidelity gap?</strong> Read locally,
+the released orange has a primitive every 0.68 pixels of a 512 render against our 1.70. Read against
+what the count supports over the volume, the gap is 1.63× — the difference between the two readings is
+clustering, their nearest-neighbour spacing being less than half their uniform spacing against our two
+thirds. Matching the uniform figure costs 4.3× the cells, about 3.9M, which is their primitive count.
+So the answer is that we can, and that doing so spends exactly the advantage being claimed.</div>
+
+<h2 id="topology">Arbitrary topology <span class="tag ok">measured</span></h2>
+<p>
+The published dataset — watermelon, apple, orange, red velvet cake, loaf bread, pomegranate — is
+entirely genus zero and every released model is star-shaped about its centroid. We train a doughnut.
+</p>
+<figure><img src="assets/doughnut.png" alt="Doughnut cross-sections"></figure>
+<div class="note"><strong>The one place topology is not free.</strong> A reference is re-mapped onto the
+rendered section by a bijection when the two agree in topology and by a depth profile otherwise. The
+reference mask fills its enclosed regions so a pale core — an orange's — stays part of the section; a
+doughnut's hole is also pale and also enclosed, and nothing in the image separates them. Filled, the
+reference reports no hole while the rendered annulus reports one, so every transverse plane takes the
+fallback for the whole run — a lookup on distance to the boundary, which can only draw bands parallel
+to the silhouette. High-frequency energy 32.3 with the test fixed against 6.3 without.
+And the reference saved beside it still showed crumb, so nothing in the logs looked wrong.</div>
+<p style="color:var(--mut);font-size:14px">
+The reference-free metrics do not see this failure at all: CLIP scores 28.6 and 28.1 for the two runs,
+and cross-view consistency <em>prefers</em> the broken one, 0.892 against 0.861, because a surface of
+revolution is more self-similar across views than crumb is.
+</p>
+
+<h2 id="negative">What did not work <span class="tag no">reported</span></h2>
+<p>
+The published method regenerates each cross-sectional reference from the model's own render every
+iteration, so both families of planes descend from one 3-D state. The diagnosis is right — the two
+families do contradict each other, measurably — but every way we implemented it cost more than it
+returned.
+</p>
+<div class="tw"><table>
+  <thead><tr><th>Orange, held-out cuts</th><th></th><th>FID h ↓</th><th>FID v ↓</th></tr></thead>
+  <tbody>
+    <tr><td>No consistency mechanism</td><td></td><td class="win">118.9</td><td>210.5</td></tr>
+    <tr><td>SDS regeneration (the published loop)</td><td></td><td>171.6</td><td>229.8</td></tr>
+    <tr><td>Geometric reconciliation along plane intersections</td><td></td><td>129.1</td><td class="win">207.4</td></tr>
+    <tr><td>&nbsp;&nbsp;… started late and held, so corrections compound</td><td></td><td>129.7</td><td>224.2</td></tr>
+  </tbody></table></div>
+<p>
+The last row is the informative one. Holding the reconciled targets instead of re-deriving them drove
+the measured disagreement between the two families down by an order of magnitude, from 0.16–0.23 to
+0.02–0.04 — so the mechanism does what it claims. The sections did not improve. The families were
+genuinely in conflict and resolving that conflict is not what the fidelity gap was made of.
+</p>
+<p style="color:var(--mut);font-size:14px">
+Also measured and not adopted: predicting material as an auxiliary task alongside appearance (mixed —
+transverse 118.9→136.8, longitudinal 210.5→193.1, and the head fits worse jointly than it does
+afterwards on the frozen feature, 0.204 against 0.077); drawing the transverse camera's roll at random
+each iteration; raising the band-statistics weight 3.3×, which moved the surplus high-frequency energy
+by 12% and cost 33 FID. A resolution scan was attempted and is not reported: the shell extraction that
+seeded it left the fill unable to reach the centre, so those runs measure an extraction parameter
+rather than resolution.
+</p>
+
+<footer>
+Built on <a href="https://arxiv.org/abs/2411.12089" style="color:var(--acc)">FruitNinja</a>
+(Wu &amp; Chen, CVPR 2025) and
+<a href="https://arxiv.org/abs/2311.12198" style="color:var(--acc)">PhysGaussian</a>
+(Xie et&nbsp;al., CVPR 2024). Numbers on this page are measured under one protocol on one machine and
+include the negative results.
+</footer>
+
+</div>
+</body>
+</html>
