@@ -75,11 +75,22 @@
 </header>
 
 <figure style="margin-top:26px">
+  <img src="assets/slices.gif" alt="An orange cut into five slices that fall apart">
+  <figcaption>Four planes arrive at once and the object answers with five pieces —
+  <span style="white-space:nowrap">167k / 183k / 200k / 180k / 169k</span> cells — each becoming
+  its own simulated body with the state it had a frame earlier. The piece count is what
+  connected-component labelling returns on the lattice, not a number given to the system, and the
+  faces the cuts expose are the interior this representation was built to carry.</figcaption>
+</figure>
+
+<figure>
   <div class="grid2" style="gap:14px">
     <img src="assets/sweep_transverse.gif" alt="A plane sweeping through the orange">
     <img src="assets/sweep_longitudinal.gif" alt="A plane turning about the axis">
   </div>
-  <figcaption>One model, cut everywhere. The plane walks from pole to pole on the left and turns about the axis on the right, at depths and angles the supervision never sampled, and at the slab thickness training used. Individually plausible sections could be unrelated pictures; a continuous sweep is what shows they describe one object — the pith stays where it was from frame to frame, and the angular profile of one section correlates +0.823 with the next depth.</figcaption>
+  <figcaption>The same model cut everywhere else: the plane walks from pole to pole on the left
+  and turns about the axis on the right, at depths and angles the supervision never sampled. The
+  angular profile of one section correlates +0.823 with the next depth.</figcaption>
 </figure>
 
 <h2 id="abstract">Abstract</h2>
