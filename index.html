@@ -395,26 +395,21 @@ one distance transform of the free space answers it for every particle at once. 
 separate along the mean of those directions by the depth of the deepest, as a rigid translation, so
 that resolving contact cannot deform a slice.
 </p>
-<figure>
-  <img src="assets/slices.gif" alt="An orange cut into five slices that fall apart">
-  <figcaption>Four planes arrive at once and the object answers with five pieces —
-  <span style="white-space:nowrap">167k / 183k / 200k / 180k / 169k</span> cells — each becoming
-  its own simulated body with the state it had a frame earlier. The piece count is what
-  connected-component labelling returns on the lattice, not a number given to the system, and the
-  faces the cuts expose are the interior this representation was built to carry.</figcaption>
-</figure>
 
 
-<figure><img src="assets/slices_plot.png" alt="Pieces and inter-piece contacts over time">
-  <figcaption><strong>The same run, measured.</strong> The occupancy grid answers the contact
-  query directly: a particle is inside another piece exactly when it lands in one of that piece's
-  occupied cells, which is a lookup, and the way out is the vector to the nearest free cell, which
-  one distance transform returns for every particle at once. The pieces then separate along the mean
-  of those directions, by the depth of the deepest, as a rigid translation — so resolving contact
-  cannot deform a slice. Penetration deeper than a cell (red) is present on one frame of 170 and is
-  zero from frame&nbsp;36 on, peaking at 2.0 cells; the grey band is the contact footprint, the
-  surface area over which the stack rests, which is what a standing stack is supposed to have.
-  Labelling costs 309&nbsp;ms per cut, once, on 898,563 cells.</figcaption></figure>
+
+<figure><img src="assets/slices_plot.png" alt="Pieces, contact and penetration depth over time">
+  <figcaption><strong>Contact, measured.</strong> An orange is cut into five slices by four
+  simultaneous planes, which fall onto a floor and settle into a stack. The occupancy grid answers
+  the contact query directly: a particle is inside another piece exactly when it lands in one of
+  that piece's occupied cells, which is a lookup, and the way out is the vector to the nearest free
+  cell, which one distance transform returns for every particle at once. The pieces then separate
+  along the mean of those directions, by the depth of the deepest, as a rigid translation — so
+  resolving contact cannot deform a slice. Penetration deeper than a cell (red) is present on one
+  frame of 170 and is zero from frame&nbsp;36 on, peaking at 2.0 cells; the grey band is the
+  contact footprint, the surface over which the stack rests, which is what a standing stack is
+  supposed to have. Labelling costs 309&nbsp;ms per cut, once, on 898,563
+  cells.</figcaption></figure>
 
 <figure>
   <img src="assets/cutting.png" alt="Piece count and contacts over time">
