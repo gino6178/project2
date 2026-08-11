@@ -79,10 +79,7 @@
     <img src="assets/sweep_transverse.gif" alt="A plane sweeping through the orange">
     <img src="assets/sweep_longitudinal.gif" alt="A plane turning about the axis">
   </div>
-  <figcaption>One model, cut everywhere. The plane walks from pole to pole on the left and turns
-  about the axis on the right, at depths and angles the supervision never sampled. Individually
-  plausible sections could be unrelated pictures; a continuous sweep is what shows they describe
-  one object — the pith stays where it was from frame to frame.</figcaption>
+  <figcaption>One model, cut everywhere. The plane walks from pole to pole on the left and turns about the axis on the right, at depths and angles the supervision never sampled, and at the slab thickness training used. Individually plausible sections could be unrelated pictures; a continuous sweep is what shows they describe one object — the pith stays where it was from frame to frame, and the angular profile of one section correlates +0.823 with the next depth.</figcaption>
 </figure>
 
 <h2 id="abstract">Abstract</h2>
@@ -324,6 +321,12 @@ background. How far a released model survives depends on how densely it was fill
 at 2048, the watermelon, filled about twice as densely for its size, at 4096.</p>
 
 <h3 id="fidelity">Interior fidelity</h3>
+<figure><img src="assets/sweep_compare.png" alt="The same six depths from both models">
+  <figcaption>The same six depths from each model. Flesh whiteness is 0.58% for the lattice
+  against the photographs' 0.82% and the released model's 1.29%; the released model carries a
+  heavier ring of albedo at the rim, at +0.231 against the photographs' +0.175 and ours
+  +0.119.</figcaption></figure>
+
 <figure><img src="assets/cuts_gallery.png" alt="Held-out cuts of the orange">
   <figcaption>Twelve cuts at depths and angles the training never sampled, from one model. The
   transverse sections agree with each other about where the pith is and the longitudinal ones about
