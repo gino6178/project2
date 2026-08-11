@@ -83,6 +83,13 @@
   faces the cuts expose are the interior this representation was built to carry.</figcaption>
 </figure>
 
+<figure><img src="assets/slices_plot.png" alt="Pieces and inter-piece contacts over time">
+  <figcaption>The same run, measured. Contacts between pieces are zero while the object is one
+  solid and rise the moment the labelling returns five bodies, staying non-zero on 158 of 170
+  frames and peaking at 610,950 — the slices land on each other and keep pressing. This is what
+  a piece count buys: a fragment the solver knows about is a fragment that can be collided with.
+  Labelling costs 309&nbsp;ms per cut, once, on 898,563 cells.</figcaption></figure>
+
 <figure>
   <div class="grid2" style="gap:14px">
     <img src="assets/sweep_transverse.gif" alt="A plane sweeping through the orange">
