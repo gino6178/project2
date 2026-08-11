@@ -323,8 +323,8 @@ The representation is an order of magnitude cheaper, tracks the photographs' own
   <tbody>
     <tr><td><strong>Cost</strong></td><td>Primitives, orange</td><td>3,928,330</td><td class="win">898,563</td><td>4.4× fewer</td></tr>
     <tr><td></td><td>Parameters, orange</td><td>55.0M</td><td class="win">7.2M</td><td>7.6× fewer</td></tr>
-    <tr><td></td><td>Primitives, watermelon</td><td>7,959,789</td><td class="win">806,506</td><td>9.9× fewer</td></tr>
-    <tr><td></td><td>Parameters, watermelon</td><td>111.4M</td><td class="win">6.5M</td><td>17.2× fewer</td></tr>
+    <tr><td></td><td>Primitives, watermelon</td><td>7,959,789</td><td class="win">826,599</td><td>9.6× fewer</td></tr>
+    <tr><td></td><td>Parameters, watermelon</td><td>111.4M</td><td class="win">6.6M</td><td>16.8× fewer</td></tr>
     <tr><td><strong>Detail</strong></td><td>Spectral power at f/16 (photographs: 0.00142)</td><td>0.00203</td><td class="win">0.00109</td><td>closer to the reference</td></tr>
     <tr><td></td><td>Section lost to gaps, 2048 px</td><td>29.58%</td><td class="win">0.19%</td><td>156× less</td></tr>
     <tr><td></td><td>Section lost to gaps, 4096 px</td><td>72.69%</td><td class="win">0.23%</td><td>316× less</td></tr>
@@ -398,18 +398,7 @@ that resolving contact cannot deform a slice.
 
 
 
-<figure><img src="assets/slices_plot.png" alt="Pieces, contact and penetration depth over time">
-  <figcaption><strong>Contact, measured.</strong> An orange is cut into five slices by four
-  simultaneous planes, which fall onto a floor and settle into a stack. The occupancy grid answers
-  the contact query directly: a particle is inside another piece exactly when it lands in one of
-  that piece's occupied cells, which is a lookup, and the way out is the vector to the nearest free
-  cell, which one distance transform returns for every particle at once. The pieces then separate
-  along the mean of those directions, by the depth of the deepest, as a rigid translation — so
-  resolving contact cannot deform a slice. Penetration deeper than a cell (red) is present on one
-  frame of 170 and is zero from frame&nbsp;36 on, peaking at 2.0 cells; the grey band is the
-  contact footprint, the surface over which the stack rests, which is what a standing stack is
-  supposed to have. Labelling costs 309&nbsp;ms per cut, once, on 898,563
-  cells.</figcaption></figure>
+
 
 <figure>
   <img src="assets/cutting.png" alt="Piece count and contacts over time">
@@ -479,8 +468,13 @@ and nothing in the pipeline is told the object has a hole.</figcaption>
 
 <figure><img src="assets/interior_orange.png" alt="Orange, held-out cuts"></figure>
 <figure><img src="assets/interior_watermelon.png" alt="Watermelon, held-out cuts">
-  <figcaption>Held-out cuts — depths and angles the training never sampled, scored with FID<sup class="cite">[43]</sup>, KID<sup class="cite">[44]</sup> and CLIP<sup class="cite">[42]</sup>. Both models measured under the identical protocol on the same machine, rather than quoting published numbers computed
-  differently.</figcaption></figure>
+  <figcaption>Held-out cuts of the watermelon — depths the training never sampled, rendered from
+  826,599 cells against the released model's 7,959,789. The rind, pith and flesh come out in the
+  right order and at the right relative thickness at every depth, on a shell that was sealed on the
+  lattice before anything was painted: the released capture's skin covers only 84.5% of its own
+  silhouette, and the 15.5% that is missing is where a red interior would otherwise show through.
+  Both models were measured under the identical protocol on the same machine, rather than quoting
+  published numbers computed differently.</figcaption></figure>
 <div class="tw"><table>
   <thead><tr><th>Object</th><th>Method</th><th>FID h ↓</th><th>KID h ↓</th><th>FID v ↓</th><th>KID v ↓</th><th>Cos ↑</th></tr></thead>
   <tbody>
