@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Voxel-Lattice Gaussians: Cutting, collision and material from one representation</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
+      integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"
+        integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"
+        onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
 <style>
   /* A light page, in the plain style academic project pages use: one centred column, dark
      text on white, headings left-aligned, figures full width with the caption under them.
@@ -16,6 +23,18 @@
        font:17px/1.7 "Charter","Georgia","Times New Roman",serif;
        -webkit-font-smoothing:antialiased}
   .wrap{max-width:820px;margin:0 auto;padding:0 22px}
+  /* Display equations, numbered on the right the way the paper numbers them, and allowed to
+     scroll on a phone rather than widening the column. */
+  .eq{display:flex;align-items:center;gap:14px;margin:20px 0}
+  .eq .body{flex:1;overflow-x:auto;overflow-y:hidden;text-align:center}
+  .eq .num{color:var(--mut);font-size:14px;flex:none}
+  .katex{font-size:1.02em}
+  /* The interior-texture videos: one column per object, one row per viewing angle, so a reader
+     compares down a column and the two angles of one object stay together. */
+  .vgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0 6px}
+  .vgrid video{width:100%;display:block;border-radius:3px;background:#fff}
+  .vgrid .lab{font-size:13px;color:var(--mut);text-align:center;margin:2px 0 6px}
+  @media (max-width:640px){ .vgrid{grid-template-columns:repeat(2,1fr)} }
   header{padding:56px 0 30px;text-align:center;border-bottom:1px solid var(--line)}
   h1{font-size:clamp(27px,4.4vw,40px);line-height:1.22;margin:0 0 10px;font-weight:600;
      letter-spacing:-.01em}
@@ -84,15 +103,15 @@
 </figure>
 
 <figure><img src="assets/slices_plot.png" alt="Pieces and inter-piece contacts over time">
-  <figcaption>The same run, measured. The lattice makes the overlap query a grid lookup, so
-  inter-body penetration is detected exactly and cheaply: zero while the object is one solid,
-  non-zero on 158 of 170 frames once the labelling returns five bodies. Resolving it is the
-  coarser half — MPM handles contact through a shared background grid, and one grid per piece is
-  the price of the pieces being separate bodies, so contact here is a per-body positional
-  correction along the local normal rather than a per-particle constraint. It removes about a
-  third of the penetration (peak 610,950 to 508,041 particles) and the slices still
-  interpenetrate where they rest on each other. Labelling costs 309&nbsp;ms per cut, once, on
-  898,563 cells.</figcaption></figure>
+  <figcaption><strong>The same run, measured.</strong> The occupancy grid answers the contact
+  query directly: a particle is inside another piece exactly when it lands in one of that piece's
+  occupied cells, which is a lookup, and the way out is the vector to the nearest free cell, which
+  one distance transform returns for every particle at once. The pieces then separate along the mean
+  of those directions, by the depth of the deepest, as a rigid translation — so resolving contact
+  cannot deform a slice. Penetration deeper than a cell (red) is present on one frame of 170 and is
+  zero from frame&nbsp;36 on, peaking at 2.0 cells; the grey band is the contact footprint, the
+  surface area over which the stack rests, which is what a standing stack is supposed to have.
+  Labelling costs 309&nbsp;ms per cut, once, on 898,563 cells.</figcaption></figure>
 
 <figure>
   <div class="grid2" style="gap:14px">
@@ -142,6 +161,34 @@ So we change the representation and keep the supervision. The whole object — i
 skin refined to half the interior spacing. This is the same object the fill was approximating,
 quantised onto a grid, and quantising is exactly what turns a set of points into a graph.
 </p>
+<p>
+A primitive at \(x\) is assigned the cell index \(k(x)\) at a spacing that depends on where it is:
+the interior is quantised at \(h\), the shell at \(h/2\), with \(\rho R\) the radius that
+separates them and \(o\) the grid origin.
+</p>
+<div class="eq"><div class="body">$$ k(x)=\Bigl\lfloor \tfrac{x-o}{\delta(x)} \Bigr\rceil,\qquad \delta(x)=\begin{cases} h & \|x-\bar{x}\|\le \rho R\\ h/2 & \text{otherwise,}\end{cases} $$</div><div class="num">(1)</div></div>
+<p>
+The occupied cells, each an index together with its level \(\lambda\), <em>are</em> the primitive
+set; the source primitives play no part after this.
+</p>
+<div class="eq"><div class="body">$$ \mathcal{V}=\bigl\{\,(k(x),\lambda(x)) \;:\; x\in\{x_i\}_{i=1}^{N}\,\bigr\} $$</div><div class="num">(2)</div></div>
+<p>
+Quantising is what turns a set of points into a graph, because a grid comes with its own
+adjacency — two cells are neighbours when their boxes share a face:
+</p>
+<div class="eq"><div class="body">$$ \mathcal{A}=\bigl\{(a,b)\in\mathcal{V}^2 \;:\; \mathrm{area}(B_a\cap B_b)>0\bigr\} $$</div><div class="num">(3)</div></div>
+<p style="color:var(--mut);font-size:14px">
+Within one level this is the six-neighbour test \(\|k_a-k_b\|_1=1\); the general form is needed
+only along the shell, where one coarse box meets four fine ones. Cell \(i\)'s Gaussian sits at
+\(y_i=o+\delta_i k_i\) before the decoded offset moves it, and every geometric quantity below is a
+function of the index rather than a free parameter.
+</p>
+<p>
+One shared MLP decodes every cell's appearance, opacity and offset from its eight-dimensional
+feature \(f_i\), so position is implicit in the grid index:
+</p>
+<div class="eq"><div class="body">$$ (\Delta x_i,\, s_i,\, q_i,\, \alpha_i,\, c_i)=\Psi_2\bigl(\Psi_1(f_i)\bigr),\qquad x_i=o+\delta_i k_i+\Delta x_i $$</div><div class="num">(4)</div></div>
+
 
 <h2 id="related">Related Work</h2>
 
@@ -246,6 +293,25 @@ weighted by cosine over a 60° cone and by the rasteriser's own coverage, and th
 training schedule we tried degraded that projected exterior, because the exterior branch averages over
 views and averaging removes whatever only one view sees.
 </p>
+<p>
+A skin cell reads the pixel it projects to in every view that can see it, weighted by the cosine
+between the cell normal \(n_i\) and the view direction \(v_j\) and by the rasteriser's own
+coverage \(a_j\):
+</p>
+<div class="eq"><div class="body">$$ c_i=\frac{\sum_j w_{ij}\, I_j(\pi_j(x_i))}{\sum_j w_{ij}},\qquad w_{ij}=\bigl[n_i\!\cdot\! v_j\bigr]_+^{\gamma}\, a_j(\pi_j(x_i))^{4} $$</div><div class="num">(5)</div></div>
+<p>
+The interior is supervised through the same rasteriser, on the cells within half a plane spacing
+\(\Delta_\pi\) of the plane, with everything in front of it discarded — which is what makes the
+image a cut rather than a view:
+</p>
+<div class="eq"><div class="body">$$ \mathcal{S}(\pi)=\bigl\{\, i\in\mathcal{V} \;:\; \lambda_i=0,\;\; |\pi(x_i)|<\Delta_\pi/2 \,\bigr\} $$</div><div class="num">(6)</div></div>
+<p>
+The reference is re-mapped onto the rendered component by \(\Phi\) before the loss sees it: the
+photograph is of a different specimen, so a per-pixel loss against it would ask the model to move
+segments that are correct.
+</p>
+<div class="eq"><div class="body">$$ \mathcal{L}=0.7\,\bigl(1-\mathrm{SSIM}(r,T)\bigr)+0.3\,\|r-T\|_2^2,\qquad T=\Phi(r,\hat{r}) $$</div><div class="num">(7)</div></div>
+
 
 <h3>Quantisation details that are not cosmetic</h3>
 <p style="color:var(--mut);font-size:14px">
@@ -313,6 +379,31 @@ the same side of it — one <code>O(1)</code> test per cell. Connected-component
 how many pieces exist: exactly, with no threshold to choose. One MPM solver is built per piece with
 state carried over.
 </p>
+<p>
+The cut deletes the edges it crosses, leaving the graph \(G=(\mathcal{V},\mathcal{E})\) on the same
+occupied cells:
+</p>
+<div class="eq"><div class="body">$$ \mathcal{E}=\bigl\{(a,b)\in\mathcal{A} \;:\; \mathrm{sgn}\,\pi(x_a)=\mathrm{sgn}\,\pi(x_b)\bigr\} $$</div><div class="num">(8)</div></div>
+<p>
+Both tests are \(O(1)\) per cell, the first because \(\mathcal{A}\) was built once with the
+lattice. The pieces are the components of \(G\), and the piece count \(K\) is read off rather than
+chosen:
+</p>
+<div class="eq"><div class="body">$$ \{\mathcal{C}_1,\dots,\mathcal{C}_K\}=\mathcal{V}/\!\sim,\qquad a\sim b \iff \exists\ \text{a path } a\to b \text{ in } G $$</div><div class="num">(9)</div></div>
+<p>
+The rendered primitives follow their own piece, blended over the \(\mathcal{K}(g)\) nearest cells
+<em>within</em> that piece, so a cut severs the skinning as well as the physics. \(Q_m\) is the
+best-fit rotation of piece \(m\) from its rest cells to their current ones and \(d_g\) the
+primitive's rest offset, without which a piece loses its surface detail as it tumbles:
+</p>
+<div class="eq"><div class="body">$$ x_g=\sum_{i\in\mathcal{K}(g)} \omega_{gi}\, x_i \;+\; Q_{m(g)}\, d_g $$</div><div class="num">(10)</div></div>
+<p>
+Contact uses the same occupancy. A particle of one piece is inside another exactly when it lands in
+an occupied cell of it, which is a lookup, and the way out is the vector to the nearest free cell —
+one distance transform of the free space answers it for every particle at once. The pieces then
+separate along the mean of those directions by the depth of the deepest, as a rigid translation, so
+that resolving contact cannot deform a slice.
+</p>
 <figure>
   <img src="assets/cutting.png" alt="Piece count and contacts over time">
   <figcaption>Two cuts, at frames 20 and 95. The piece count (black) is not scripted — it is what the
@@ -341,6 +432,35 @@ at 4096.
 <p style="color:var(--mut);font-size:14px">Fraction of a transverse section's own area that renders as
 background. How far a released model survives depends on how densely it was filled — the orange fails
 at 2048, the watermelon, filled about twice as densely for its size, at 4096.</p>
+
+
+<h3 id="interior">Interior textures</h3>
+<p>
+The plane sweeps along one fixed direction and the object is watched from two angles. The first row
+is head-on, the way a cross-section is supervised; the second is the same slices from 45&deg; off the
+plane normal. The comparison is the point: a texture that had been painted onto the supervised planes
+would be indistinguishable from a volumetric one in the first row and would flatten in the second.
+Ours holds. The segment boundaries keep their positions from frame to frame, the pith stays on the
+axis as the plane crosses it, and the peel keeps its thickness where the surface curves away.
+</p>
+<div class="vgrid">
+  <div><video src="assets/interior_orange_v0.mp4" autoplay loop muted playsinline preload="metadata"></video><div class="lab">Orange</div></div>
+  <div><video src="assets/interior_watermelon_v0.mp4" autoplay loop muted playsinline preload="metadata"></video><div class="lab">Watermelon</div></div>
+  <div><video src="assets/interior_doughnut_v0.mp4" autoplay loop muted playsinline preload="metadata"></video><div class="lab">Doughnut</div></div>
+</div>
+<p class="lab" style="text-align:center;color:var(--mut);font-size:13px;margin:0 0 14px">
+Head-on, along the cut normal.</p>
+<div class="vgrid">
+  <div><video src="assets/interior_orange_v1.mp4" autoplay loop muted playsinline preload="metadata"></video><div class="lab">Orange</div></div>
+  <div><video src="assets/interior_watermelon_v1.mp4" autoplay loop muted playsinline preload="metadata"></video><div class="lab">Watermelon</div></div>
+  <div><video src="assets/interior_doughnut_v1.mp4" autoplay loop muted playsinline preload="metadata"></video><div class="lab">Doughnut</div></div>
+</div>
+<p style="color:var(--mut);font-size:13px;text-align:center;margin:0">
+The same slices, 45&deg; off the normal.</p>
+<figcaption style="margin-top:12px">Consistency of the generated interior as each object is sliced
+along a fixed direction, from two viewing angles. The three objects are trained the same way and
+differ only in their references; the doughnut's hole means every one of its transverse sections is an
+annulus, which is a topology the section supervision has to reproduce rather than be told.</figcaption>
 
 <h3 id="fidelity">Interior fidelity</h3>
 <figure><img src="assets/sweep_compare.png" alt="The same six depths from both models">
@@ -410,6 +530,19 @@ appearance says what kind of interior. Clustering those, with classes merged whe
 centroids agree so <em>K</em> is not chosen by hand, separates an orange into peel, flesh, a transition
 and pith — <strong>nothing is told that an orange has a pith</strong>.
 </p>
+<p>
+Each class is placed on a stiffness scale by the two things the representation has to offer — how
+much of the class is shell (\(\beta_j\)) and how bright it is (\(L_j\)), each ranked across
+classes so neither can dominate by units — and the scale is mapped to Young's modulus:
+</p>
+<div class="eq"><div class="body">$$ u_j=0.65\,\beta_j+0.35\,\mathcal{R}(L)_j,\qquad r_i=\mathcal{R}(u)_{j(i)},\qquad E_i=E_{\min}+r_i\,(E_{\max}-E_{\min}) $$</div><div class="num">(11)</div></div>
+<p>
+That the material is <em>in</em> the feature and not just in our clustering is a separate claim, so it
+is tested separately: a probe fitted on the frozen features to predict \(r_i\), scored on a held-out
+split, against the same fit on a shuffled target.
+</p>
+<div class="eq"><div class="body">$$ \hat{g}=\arg\min_{g\in\mathcal{G}}\ \frac{1}{|\mathcal{T}|}\sum_{i\in\mathcal{T}}\bigl(g(f_i)-r_i\bigr)^2 $$</div><div class="num">(12)</div></div>
+
 <figure><img src="assets/material.png" alt="Material decomposition">
   <figcaption>Transverse and longitudinal slabs, actual colour beside class colour. Red is the peel
   (skin fraction 1.00); yellow is the pith and the central column.</figcaption></figure>
