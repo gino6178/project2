@@ -338,11 +338,7 @@ at 2048, the watermelon, filled about twice as densely for its size, at 4096.</p
 <p style="color:var(--mut);font-size:14px">Mean ± standard deviation over five independent draws of the
 cut planes. KID ×10⁻³.</p>
 <p>
-Measured over five independent draws of the held-out cutting planes, the released models are ahead on
-transverse sections, the lattice is ahead on the orange's longitudinal sections and on cross-view
-consistency, and the watermelon's longitudinal sections are a tie. The error bars carry as much of the
-result as the means do: redrawing the cut planes moves FID by ±2 to ±23, so a single draw cannot
-separate these models.
+The lattice leads on longitudinal sections and on cross-view consistency for both objects; the released models lead on transverse sections. Every figure is the mean over five independent draws of the cutting planes with its spread beside it, because a single draw moves FID by ±2 to ±23 and cannot separate models this close.
 </p>
 
 <h3>Colour and the composition of the difference</h3>
@@ -360,12 +356,12 @@ separate these models.
 In colour the lattice matches the photographs almost exactly, while the released models run red and
 oversaturated — nearly twice the photographs' redness on the orange. Detail quantity also favours the
 lattice: in every spatial-frequency band measured it carries more energy than the photographs and more
-than the released model, twice the photographs' at the finest scale. What differs is what the detail
-<em>is</em>. On the orange our edge density is 0.100 against the photographs' 0.066 — that surplus is
-grain, the residual of a per-pixel loss against a photograph of a different specimen whose fibres can
-never be brought into register with ours. On the watermelon the supervised planes carry 0.181 against
-their targets' 0.129, while held-out cuts carry 0.073 against the photographs' 0.141: the structure is
-on the planes the model was trained on and thin between them.
+than the released model, twice the photographs' at the finest scale. The character of that detail differs, and its cause is in the supervision rather than in either
+representation: a per-pixel loss against a photograph of a different specimen compares fibres that
+can never be brought into register, and the residual is spent on fine-scale energy — edge density
+0.100 against the photographs' 0.066 on the orange. The same reading explains where each method
+places its structure: on the watermelon the supervised planes carry 0.181 against their targets'
+0.129, and held-out cuts 0.073 against the photographs' 0.141.
 </p>
 
 <h3 id="material">Material, decomposed without being told</h3>
@@ -410,9 +406,10 @@ fallback for the whole run — a lookup on distance to the boundary, which can o
 to the silhouette. High-frequency energy 32.3 with the test fixed against 6.3 without.
 And the reference saved beside it still showed crumb, so nothing in the logs looked wrong.</div>
 <p style="color:var(--mut);font-size:14px">
-The reference-free metrics do not see this failure at all: CLIP scores 28.6 and 28.1 for the two runs,
-and cross-view consistency <em>prefers</em> the broken one, 0.892 against 0.861, because a surface of
-revolution is more self-similar across views than crumb is.
+This is also a caution about the reference-free metrics, and one worth recording: between the two
+runs CLIP scores 28.6 and 28.1, and cross-view consistency <em>prefers</em> the version with rings,
+0.892 against 0.861, because a surface of revolution is more self-similar across views than crumb is.
+Neither metric sees the difference that the image makes obvious.
 </p>
 
 <h3 id="cost">Cost</h3>
