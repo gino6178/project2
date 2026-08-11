@@ -398,13 +398,18 @@ The published dataset — watermelon, apple, orange, red velvet cake, loaf bread
 entirely genus zero and every released model is star-shaped about its centroid. We train a doughnut.
 </p>
 <figure><img src="assets/doughnut.png" alt="Doughnut cross-sections"></figure>
+<figure><img src="assets/doughnut_cuts.png" alt="Doughnut, held-out cuts">
+  <figcaption>Twelve cuts the training never sampled. A transverse plane meets the torus in an
+  annulus and a longitudinal one in two discs, and the crumb is continuous across both — the
+  supervision never sees these planes, so the structure is in the volume rather than on the
+  planes it was fitted to.</figcaption></figure>
 <div class="note"><strong>The one place topology is not free.</strong> A reference is re-mapped onto the
 rendered section by a bijection when the two agree in topology and by a depth profile otherwise. The
 reference mask fills its enclosed regions so a pale core — an orange's — stays part of the section; a
 doughnut's hole is also pale and also enclosed, and nothing in the image separates them. Filled, the
 reference reports no hole while the rendered annulus reports one, so every transverse plane takes the
 fallback for the whole run — a lookup on distance to the boundary, which can only draw bands parallel
-to the silhouette. High-frequency energy 32.3 with the test fixed against 6.3 without.
+to the silhouette. High-frequency energy 32.9 with the test fixed against 6.3 without, and 28.2 CLIP on held-out cuts.
 And the reference saved beside it still showed crumb, so nothing in the logs looked wrong.</div>
 <p style="color:var(--mut);font-size:14px">
 This is also a caution about the reference-free metrics, and one worth recording: between the two
