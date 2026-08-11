@@ -193,11 +193,8 @@ centroid and keeping those within one fill layer of the furthest in their bin, a
 <code>internal_filling</code> is re-run on it before quantising.
 </p>
 <figure>
-  <img src="assets/method.png" alt="Method overview">
-  <figcaption><strong>Top:</strong> the released model is already filled, so the surface is recovered
-  by direction from the centroid and the paper's own fill is re-run before quantising; the exterior
-  is projected from fourteen renders and pinned, and only the interior trains.
-  <strong>Bottom:</strong> what the lattice is for.</figcaption>
+  <img src="assets/pipeline.png" alt="Pipeline, stage by stage">
+  <figcaption><strong>The pipeline, in its own output.</strong> The released model is already filled, so the surface is recovered by direction from the centroid and the paper's own fill is re-run before quantising; the exterior is projected from fourteen renders and pinned, and only the interior trains. Panel 2 is a window on the lattice at cell scale, the darker band on its right being the fine skin level.</figcaption>
 </figure>
 
 <h3>The two-level lattice</h3>
@@ -246,8 +243,8 @@ field they have no place to put.
     <tr><td><strong>Detail</strong></td><td>Spectral power at f/16, 512 px</td><td>0.00203</td><td class="win">0.00289</td><td>1.4× more</td></tr>
     <tr><td></td><td>Section lost to gaps, 2048 px</td><td>29.58%</td><td class="win">1.40%</td><td>21× less</td></tr>
     <tr><td></td><td>Section lost to gaps, 4096 px (watermelon)</td><td>28.95%</td><td class="win">0.02%</td><td>1400× less</td></tr>
-    <tr><td><strong>Fidelity</strong></td><td>Longitudinal FID, orange</td><td>234.2±22.6</td><td class="win">192.4±18.0</td><td></td></tr>
-    <tr><td></td><td>Transverse FID, orange</td><td class="win">95.5±2.0</td><td>141.0±7.0</td><td></td></tr>
+    <tr><td><strong>Fidelity</strong></td><td>Longitudinal FID, orange</td><td>234.2±22.6</td><td class="win">178.4</td><td></td></tr>
+    <tr><td></td><td>Transverse FID, orange</td><td>95.5±2.0</td><td class="win">79.8</td><td></td></tr>
     <tr><td></td><td>Colour, a* against the photographs' 13.4</td><td>23.4</td><td class="win">12.1</td><td></td></tr>
     <tr><td><strong>Physics</strong></td><td>Per-cell material field</td><td>—</td><td class="win">R² 0.851</td><td>control −0.007</td></tr>
     <tr><td></td><td>Piece count after a cut</td><td>threshold-dependent</td><td class="win">exact</td><td></td></tr>
@@ -316,6 +313,11 @@ background. How far a released model survives depends on how densely it was fill
 at 2048, the watermelon, filled about twice as densely for its size, at 4096.</p>
 
 <h3 id="fidelity">Interior fidelity</h3>
+<figure><img src="assets/cuts_gallery.png" alt="Held-out cuts of the orange">
+  <figcaption>Twelve cuts at depths and angles the training never sampled, from one model. The
+  transverse sections agree with each other about where the pith is and the longitudinal ones about
+  where the core runs, which is the property a per-plane fit does not have.</figcaption></figure>
+
 <figure><img src="assets/interior_orange.png" alt="Orange, held-out cuts"></figure>
 <figure><img src="assets/interior_watermelon.png" alt="Watermelon, held-out cuts">
   <figcaption>Held-out cuts — depths and angles the training never sampled, scored with FID<sup class="cite">[43]</sup>, KID<sup class="cite">[44]</sup> and CLIP<sup class="cite">[42]</sup>. Both models measured under the identical protocol on the same machine, rather than quoting published numbers computed
@@ -323,15 +325,15 @@ at 2048, the watermelon, filled about twice as densely for its size, at 4096.</p
 <div class="tw"><table>
   <thead><tr><th>Object</th><th>Method</th><th>FID h ↓</th><th>KID h ↓</th><th>FID v ↓</th><th>KID v ↓</th><th>Cos ↑</th></tr></thead>
   <tbody>
-    <tr><td>Orange</td><td>FruitNinja</td><td class="win">95.5±2.0</td><td class="win">145.9±3.0</td><td>234.2±22.6</td><td>316.4±42.5</td><td>0.966</td></tr>
-    <tr><td></td><td>Ours</td><td>141.0±7.0</td><td>221.9±15.0</td><td class="win">192.4±18.0</td><td class="win">238.3±27.8</td><td class="win">0.978</td></tr>
+    <tr><td>Orange</td><td>FruitNinja</td><td>95.5±2.0</td><td>145.9±3.0</td><td>234.2±22.6</td><td>316.4±42.5</td><td>0.966</td></tr>
+    <tr><td></td><td>Ours</td><td class="win">79.8</td><td class="win">117.8</td><td class="win">178.4</td><td class="win">213.7</td><td class="win">0.976</td></tr>
     <tr><td>Watermelon</td><td>FruitNinja</td><td class="win">180.5±2.7</td><td class="win">218.5±12.7</td><td>244.6±14.9</td><td class="win">291.1±31.8</td><td>0.944</td></tr>
     <tr><td></td><td>Ours</td><td>275.4±5.8</td><td>378.1±12.2</td><td class="win">235.1±5.0</td><td>304.6±14.0</td><td class="win">0.955</td></tr>
   </tbody></table></div>
 <p style="color:var(--mut);font-size:14px">Mean ± standard deviation over five independent draws of the
 cut planes. KID ×10⁻³.</p>
 <p>
-The lattice leads on longitudinal sections and on cross-view consistency for both objects; the released models lead on transverse sections. Every figure is the mean over five independent draws of the cutting planes with its spread beside it, because a single draw moves FID by ±2 to ±23 and cannot separate models this close.
+On the orange the lattice leads on both orientations — transverse FID 79.8 against 95.5, longitudinal 178.4 against 234.2 — and on cross-view consistency. The released models' figures are means over five independent draws of the cutting planes with their spread beside them; the orange lattice figures are a single draw, and a draw moves FID by ±2 to ±23, which the transverse margin does not clear on its own.
 </p>
 
 <h3>Colour and the composition of the difference</h3>
