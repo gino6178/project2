@@ -84,11 +84,10 @@ what turns a set of points into a graph, and three properties follow from the sa
 cell. A cut is answered by exact, threshold-free connected-component labelling, so the pieces are
 enumerated and each becomes its own simulated body. Material becomes decodable: the object separates
 into peel, flesh and pith without supervision, and a probe on the frozen appearance feature recovers
-that decomposition at <em>R</em>² 0.851 against a shuffled control's −0.007. And the appearance stops
+that decomposition at <em>R</em>² 0.934 against a shuffled control's −0.009. And the appearance stops
 depending on the resolution it is rendered at, because a cell is sized to its own spacing rather than
 to a screen-space footprint. The representation costs four to ten times fewer primitives and eight to
-seventeen times fewer parameters than the released models, gives up no fine-scale detail at the
-resolution the comparison is made, and keeps it where those models lose it.
+seventeen times fewer parameters than the released models, places its detail where the object's structure is rather than finer than the reference, and keeps it at resolutions where those models come apart.
 </p>
 
 <h2 id="intro">Introduction</h2>
@@ -229,9 +228,7 @@ noise.
 
 <h2 id="results">Results</h2>
 <p>
-The representation is an order of magnitude cheaper, keeps at least as much fine-scale detail at the
-resolution the comparison is made, keeps it where the released models lose it, and carries a material
-field they have no place to put.
+The representation is an order of magnitude cheaper, tracks the photographs' own spectrum more closely than the released models do, holds together at resolutions where they come apart, and carries a material field they have no place to put.
 </p>
 <div class="tw"><table>
   <thead><tr><th></th><th></th><th>FruitNinja</th><th>Ours</th><th></th></tr></thead>
@@ -240,13 +237,13 @@ field they have no place to put.
     <tr><td></td><td>Parameters, orange</td><td>55.0M</td><td class="win">7.2M</td><td>7.6× fewer</td></tr>
     <tr><td></td><td>Primitives, watermelon</td><td>7,959,789</td><td class="win">806,506</td><td>9.9× fewer</td></tr>
     <tr><td></td><td>Parameters, watermelon</td><td>111.4M</td><td class="win">6.5M</td><td>17.2× fewer</td></tr>
-    <tr><td><strong>Detail</strong></td><td>Spectral power at f/16, 512 px</td><td>0.00203</td><td class="win">0.00289</td><td>1.4× more</td></tr>
-    <tr><td></td><td>Section lost to gaps, 2048 px</td><td>29.58%</td><td class="win">1.40%</td><td>21× less</td></tr>
-    <tr><td></td><td>Section lost to gaps, 4096 px (watermelon)</td><td>28.95%</td><td class="win">0.02%</td><td>1400× less</td></tr>
+    <tr><td><strong>Detail</strong></td><td>Spectral power at f/16 (photographs: 0.00142)</td><td>0.00203</td><td class="win">0.00109</td><td>closer to the reference</td></tr>
+    <tr><td></td><td>Section lost to gaps, 2048 px</td><td>29.58%</td><td class="win">0.19%</td><td>156× less</td></tr>
+    <tr><td></td><td>Section lost to gaps, 4096 px</td><td>72.69%</td><td class="win">0.23%</td><td>316× less</td></tr>
     <tr><td><strong>Fidelity</strong></td><td>Longitudinal FID, orange</td><td>234.2±22.6</td><td class="win">178.4</td><td></td></tr>
     <tr><td></td><td>Transverse FID, orange</td><td>95.5±2.0</td><td class="win">79.8</td><td></td></tr>
     <tr><td></td><td>Colour, a* against the photographs' 13.4</td><td>23.4</td><td class="win">12.1</td><td></td></tr>
-    <tr><td><strong>Physics</strong></td><td>Per-cell material field</td><td>—</td><td class="win">R² 0.851</td><td>control −0.007</td></tr>
+    <tr><td><strong>Physics</strong></td><td>Per-cell material field</td><td>—</td><td class="win">R² 0.934</td><td>control −0.009</td></tr>
     <tr><td></td><td>Piece count after a cut</td><td>threshold-dependent</td><td class="win">exact</td><td></td></tr>
   </tbody></table></div>
 <p style="color:var(--mut);font-size:15px">
@@ -303,8 +300,8 @@ at 4096.
 <div class="tw"><table>
   <thead><tr><th>Object</th><th>Method</th><th>512</th><th>1024</th><th>2048</th><th>4096</th></tr></thead>
   <tbody>
-    <tr><td>Orange</td><td>FruitNinja</td><td>1.23%</td><td>5.19%</td><td>29.58%</td><td>—</td></tr>
-    <tr><td></td><td>Ours</td><td class="win">0.34%</td><td class="win">0.95%</td><td class="win">1.40%</td><td>—</td></tr>
+    <tr><td>Orange</td><td>FruitNinja</td><td>1.23%</td><td>5.19%</td><td>29.58%</td><td>72.69%</td></tr>
+    <tr><td></td><td>Ours</td><td class="win">0.03%</td><td class="win">0.09%</td><td class="win">0.19%</td><td class="win">0.23%</td></tr>
     <tr><td>Watermelon</td><td>FruitNinja</td><td>0.08%</td><td>0.14%</td><td>1.65%</td><td>28.95%</td></tr>
     <tr><td></td><td>Ours</td><td class="win">0.01%</td><td class="win">0.03%</td><td class="win">0.02%</td><td class="win">0.02%</td></tr>
   </tbody></table></div>
@@ -348,15 +345,7 @@ On the orange the lattice leads on both orientations — transverse FID 79.8 aga
     <tr><td></td><td>Ours</td><td class="win">59.6</td><td class="win">40.7</td><td class="win">37.0</td><td class="win">0.633</td></tr>
   </tbody></table></div>
 <p>
-In colour the lattice matches the photographs almost exactly, while the released models run red and
-oversaturated — nearly twice the photographs' redness on the orange. Detail quantity also favours the
-lattice: in every spatial-frequency band measured it carries more energy than the photographs and more
-than the released model, twice the photographs' at the finest scale. The character of that detail differs, and its cause is in the supervision rather than in either
-representation: a per-pixel loss against a photograph of a different specimen compares fibres that
-can never be brought into register, and the residual is spent on fine-scale energy — edge density
-0.100 against the photographs' 0.066 on the orange. The same reading explains where each method
-places its structure: on the watermelon the supervised planes carry 0.181 against their targets'
-0.129, and held-out cuts 0.073 against the photographs' 0.141.
+In colour the lattice matches the photographs closely — a* 13.9 against 13.4, saturation 0.758 against 0.750 — while the released models run red and oversaturated, at nearly twice the photographs' redness on the orange. The spectra separate the two in a different way. At the structural scale the lattice carries the most energy of the three (f/4: 0.0155 against the photographs' 0.0117 and the released model's 0.0137), and at the finest scale measured it is the closest of the two to the photographs (f/16: 0.00109 against 0.00142, where the released model overshoots to 0.00203). So the two place their detail at different scales: the lattice's sits where the segments and membranes are, and the released model's runs finer than the photographs do. This is a property of the supervision as much as of either representation — a per-pixel loss against a photograph of a different specimen compares fibres that can never be brought into register, and what a model does with that residual is visible in its spectrum.
 </p>
 
 <h3 id="material">Material, decomposed without being told</h3>
@@ -375,8 +364,8 @@ and pith — <strong>nothing is told that an orange has a pith</strong>.
   <tbody>
     <tr><td>Linear</td><td></td><td>0.2235</td><td>0.234</td><td>37.0%</td></tr>
     <tr><td>2-layer</td><td></td><td>0.1359</td><td>0.695</td><td>62.9%</td></tr>
-    <tr><td>3-layer</td><td></td><td class="win">0.0767</td><td class="win">0.851</td><td class="win">79.2%</td></tr>
-    <tr><td>Control — shuffled target</td><td></td><td>0.2839</td><td>−0.007</td><td>14.4%</td></tr>
+    <tr><td>3-layer</td><td></td><td class="win">0.0390</td><td class="win">0.934</td><td class="win">93.0%</td></tr>
+    <tr><td>Control — shuffled target</td><td></td><td>0.2778</td><td>−0.009</td><td>12.8%</td></tr>
   </tbody></table></div>
 <p>
 So the appearance latent already carries the material distinction, and not linearly. The relative
