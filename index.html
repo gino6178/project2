@@ -62,30 +62,65 @@
   <h1>Lattice Interiors for 3D&nbsp;Gaussian&nbsp;Splatting</h1>
   <p class="sub">Interior texture that a simulator can cut, count, collide, and query</p>
   <div class="links">
-    <a href="#method">Method</a><a href="#cut">Cutting</a><a href="#res">Resolution</a>
-    <a href="#material">Material</a><a href="#fidelity">Fidelity</a><a href="#negative">What did not work</a>
+    <a href="#cut">Cutting</a><a href="#res">Resolution</a>
+    <a href="#material">Material</a><a href="#fidelity">Fidelity</a><a href="#method">Method</a><a href="#negative">What did not work</a>
   </div>
 </header>
 
 <h2>Overview</h2>
 <p class="lead">
-An object reconstructed by 3D Gaussian Splatting is a shell. FruitNinja fills the interior with
-free-floating opaque Gaussians and supervises them with a diffusion prior on a few cross-sectional
-planes. The rendered result is convincing and the representation is inert: an unordered point cloud,
-which a system that cuts the object cannot ask anything of.
+An object reconstructed by 3D Gaussian Splatting is a shell. Cut it open and the camera sees
+straight through to the far side, because nothing inside was ever reconstructed. FruitNinja closes
+that gap: it fills the interior with opaque atomic Gaussians, defines a small set of cross-sectional
+planes, and optimises the interior against diffusion-generated references for those planes, so that
+a cut at an unseen angle still exposes something plausible.
 </p>
 <p>
-We keep the supervision and change the representation to a <strong>two-level voxel lattice</strong> —
-one Gaussian per occupied cell, coarse inside and refined at the skin, attributes decoded from a
-shared MLP. Adjacency is then free, and adjacency is what a cut needs.
+The filled interior is a point cloud, inherited from the ray-cast filling of PhysGaussian. That is
+enough for the question the paper asks — does the exposed face <em>look</em> right — and not enough
+for the question immediately after it. A system that cuts an object needs to know what it now holds:
+how many pieces exist, which primitive belongs to which, what may collide with what, what each region
+is made of. A point cloud answers none of these without first inventing an adjacency it does not
+have, and the answer then depends on the distance threshold used to invent it. Two neighbouring
+particles in a <em>k</em>-nearest-neighbour graph are connected because a number said so, not because
+the object is.
 </p>
-<figure id="method">
-  <img src="assets/method.png" alt="Method overview">
-  <figcaption><strong>Top:</strong> the released model is already filled, so the surface is recovered
-  by direction from the centroid and the paper's own fill is re-run before quantising; the exterior
-  is projected from fourteen renders and pinned, and only the interior trains.
-  <strong>Bottom:</strong> what the lattice is for.</figcaption>
-</figure>
+<p>
+So we keep the supervision and change the representation. The interior becomes a <strong>two-level
+voxel lattice</strong>: one Gaussian per occupied cell, positioned at the cell centre, with the skin
+refined to half the interior spacing, and every cell's attributes decoded from an eight-dimensional
+feature by a shared MLP. This is the same object the fill was approximating, quantised onto a grid —
+and quantising is what turns a set of points into a graph.
+</p>
+<p>
+Four things follow, and each is measured below rather than asserted.
+<strong>Cutting becomes an event with an answer:</strong> connectivity is recomputed on the grid when
+a plane arrives, connected-component labelling reports the piece count exactly and without a
+threshold, and one MPM solver is instantiated per piece, so the pieces fall and collide as distinct
+bodies. <strong>The appearance stops depending on the render resolution:</strong> every primitive in
+the released models is a point whose screen footprint comes from the rasteriser rather than from the
+world, so a transverse section that is solid at 512 pixels is 30% background at 2048, where a lattice
+cell — sized to its own spacing — is unchanged. <strong>Material becomes a decodable property:</strong>
+the interior separates into peel, flesh and pith without being told that a fruit has a pith, and a
+probe on the frozen appearance feature recovers that decomposition at R² 0.851 against a shuffled
+control's −0.007, so the distinction was already in the representation. <strong>And nothing in the
+construction assumes a star-shaped object:</strong> we train a genus-one object whose transverse
+section is an annulus, a case the published dataset does not contain.
+</p>
+<p>
+The cost of the representation is an order of magnitude: an orange is 898,563 cells and 7.2M
+parameters against the released model's 3,928,330 primitives and 55.0M, a watermelon 806,506 and 6.5M
+against 7,959,789 and 111.4M.
+</p>
+<div class="note grey">
+<strong>What we do not claim.</strong> We do not win on interior fidelity. Measured over five
+independent draws of the held-out cutting planes, the released models are ahead on transverse
+sections, we are ahead on the orange's longitudinal sections and on cross-view consistency, and the
+watermelon's longitudinal sections are a tie. The error bars are what make that statement possible:
+redrawing the planes moves FID by ±2 to ±23, which is larger than most of the differences we spent
+the project chasing. Everything that did not work is reported at the bottom of this page, including
+three separate attempts at the 3-D consistency mechanism the published method uses.
+</div>
 
 <h2 id="cut">Cutting is an event with an answer <span class="tag ok">measured</span></h2>
 <p>
@@ -242,6 +277,34 @@ And the reference saved beside it still showed crumb, so nothing in the logs loo
 The reference-free metrics do not see this failure at all: CLIP scores 28.6 and 28.1 for the two runs,
 and cross-view consistency <em>prefers</em> the broken one, 0.892 against 0.861, because a surface of
 revolution is more self-similar across views than crumb is.
+</p>
+
+<h2 id="method">Method</h2>
+<p>
+The released models are already filled, so there is no scan to start from and no density step to
+separate one from the other: the surface is recovered by binning primitives by direction from the
+centroid and keeping those within one fill layer of the furthest in their bin, and the paper's own
+<code>internal_filling</code> is re-run on it before quantising. The exterior is then not trained at
+all — fourteen renders of that surface are projected onto the skin cells, each cell reading the pixel
+it projects to weighted by cosine over a 60° cone and by the rasteriser's own coverage, and pinned.
+It measures 0.92–0.93 SSIM against the source's own renders, and every training schedule we tried
+degraded it, because the exterior branch averages over views and averaging removes whatever only one
+view sees. Only the interior trains.
+</p>
+<figure id="method">
+  <img src="assets/method.png" alt="Method overview">
+  <figcaption><strong>Top:</strong> the released model is already filled, so the surface is recovered
+  by direction from the centroid and the paper's own fill is re-run before quantising; the exterior
+  is projected from fourteen renders and pinned, and only the interior trains.
+  <strong>Bottom:</strong> what the lattice is for.</figcaption>
+</figure>
+<p style="color:var(--mut);font-size:14px">
+Two details in the quantisation are not cosmetic. The grid origin must be snapped to the lattice
+rather than taken from the extreme primitive — taken from the furthest point, which is a skin point on
+the finer grid, the interior points land on half-integers where rounding merges them in pairs, and
+833,401 interior points became 185,295 cells silently. And the vertical axis must be classified by
+extent along the principal axes rather than taken as the least-variance direction, which on a
+near-spherical object is assembled from sampling noise.
 </p>
 
 <h2 id="negative">What did not work <span class="tag no">reported</span></h2>
