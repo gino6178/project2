@@ -84,11 +84,15 @@
 </figure>
 
 <figure><img src="assets/slices_plot.png" alt="Pieces and inter-piece contacts over time">
-  <figcaption>The same run, measured. Contacts between pieces are zero while the object is one
-  solid and rise the moment the labelling returns five bodies, staying non-zero on 158 of 170
-  frames and peaking at 610,950 — the slices land on each other and keep pressing. This is what
-  a piece count buys: a fragment the solver knows about is a fragment that can be collided with.
-  Labelling costs 309&nbsp;ms per cut, once, on 898,563 cells.</figcaption></figure>
+  <figcaption>The same run, measured. The lattice makes the overlap query a grid lookup, so
+  inter-body penetration is detected exactly and cheaply: zero while the object is one solid,
+  non-zero on 158 of 170 frames once the labelling returns five bodies. Resolving it is the
+  coarser half — MPM handles contact through a shared background grid, and one grid per piece is
+  the price of the pieces being separate bodies, so contact here is a per-body positional
+  correction along the local normal rather than a per-particle constraint. It removes about a
+  third of the penetration (peak 610,950 to 508,041 particles) and the slices still
+  interpenetrate where they rest on each other. Labelling costs 309&nbsp;ms per cut, once, on
+  898,563 cells.</figcaption></figure>
 
 <figure>
   <div class="grid2" style="gap:14px">
