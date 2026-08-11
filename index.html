@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lattice Interiors for 3D Gaussian Splatting</title>
+<title>Voxel-Lattice Gaussians: Cutting, collision and material from one representation</title>
 <style>
   :root{ --ink:#1a1a1a; --mut:#6b6b6b; --line:#e4e4e4; --acc:#b3452b; --neg:#7a7a7a;
          --bg:#fff; --panel:#fafafa; }
@@ -59,8 +59,8 @@
 <div class="wrap">
 
 <header>
-  <h1>Lattice Interiors for 3D&nbsp;Gaussian&nbsp;Splatting</h1>
-  <p class="sub">Anonymous<br>Preprint</p>
+  <h1>Voxel-Lattice&nbsp;Gaussians</h1>
+  <p class="sub">Cutting, collision and material from one representation</p>
   <div class="links">
     <a href="https://github.com/gino6178/project2">Code</a>
     <a href="#">arXiv (coming soon)</a>
@@ -70,26 +70,42 @@
 
 <h2 id="abstract">Abstract</h2>
 <p class="lead">
-An object reconstructed by 3D Gaussian Splatting is a shell: cut it open and the camera sees straight
-through to the far side, because nothing inside was ever reconstructed. FruitNinja closes that gap by
-filling the interior with opaque atomic Gaussians and optimising it against diffusion-generated
-references for a small set of cross-sectional planes, so that a cut at an unseen angle still exposes
-something plausible. The filled interior it leaves behind is a point cloud, which is enough to make an
-exposed face <em>look</em> right and not enough to say what the object now is — how many pieces exist,
-which primitive belongs to which, what may collide with what, what each region is made of. We keep
-that supervision and change the representation. The interior becomes a <strong>two-level voxel
-lattice</strong>: one Gaussian per occupied cell, positioned at the cell centre, with the skin refined
-to half the interior spacing, and every cell's attributes decoded from an eight-dimensional feature by
-a shared MLP. Quantising is what turns a set of points into a graph, and the graph is what the
-downstream questions were asking for. Cutting becomes an event with an exact, threshold-free piece
-count, with one MPM solver instantiated per piece so the pieces fall and collide as distinct bodies.
-The appearance stops depending on the render resolution, because a lattice cell is sized to its own
-spacing rather than to a screen-space footprint. Material becomes a decodable property: the interior
-separates into peel, flesh and pith without being told that a fruit has a pith. Nothing in the
-construction assumes a star-shaped object, so a genus-one object whose transverse section is an
-annulus trains as readily as a sphere. The representation costs an order of magnitude less than the
-released models — an orange is 898,563 cells and 7.2M parameters against 3,928,330 primitives and
-55.0M — and is measured against them under one protocol on one machine.
+An object reconstructed by 3D Gaussian Splatting is a shell of free-floating primitives: cut it and
+the camera sees through to the far side, and the primitives themselves carry a colour and nothing
+else. FruitNinja fills the interior and supervises it against diffusion-generated cross-sections, so
+that a cut at an unseen angle exposes something plausible — which makes an exposed face
+<em>look</em> right without making the object into something a system can ask questions of. How many
+pieces exist after a cut, which primitive belongs to which, what may collide with what, what each
+region is made of: a point cloud answers none of these without first inventing an adjacency it does
+not have, and the answer then depends on the threshold used to invent it.
+</p>
+<p>
+We keep that supervision and put the <em>whole object</em> — interior and skin alike — on a
+<strong>two-level voxel lattice</strong>: one Gaussian per occupied cell, at the cell centre, the
+skin refined to half the interior spacing, and every cell's attributes decoded from an
+eight-dimensional feature by a shared MLP. Quantising is what turns a set of points into a graph, and
+the graph is what the downstream questions were asking for.
+</p>
+<p>
+Three things follow, and the same eight numbers per cell carry all of them.
+<strong>Cutting becomes an event with an answer:</strong> connectivity is recomputed on the grid when
+a plane arrives, connected-component labelling returns the piece count exactly and without a
+threshold, and one MPM solver is instantiated per piece, so the pieces fall and collide as distinct
+bodies. <strong>Material becomes a decodable property:</strong> the object separates into peel, flesh
+and pith without being told that a fruit has a pith, a probe on the frozen appearance feature recovers
+that decomposition at R² 0.851 against a shuffled control's −0.007, and feeding the per-cell moduli to
+the solver changes the dynamics measurably — a drop that compresses a uniform object by 4.2%
+compresses the decomposed one by 0.1%. <strong>And the appearance stops depending on the resolution it
+is rendered at:</strong> a lattice cell is sized to its own spacing rather than to the rasteriser's
+screen-space footprint, so a transverse section that is solid at 512 pixels is still solid at 4096
+where the released models are a third background.
+</p>
+<p>
+Nothing in the construction assumes a star-shaped object, so a genus-one object whose transverse
+section is an annulus trains as readily as a sphere. The representation costs an order of magnitude
+less than the released models — an orange is 898,563 cells and 7.2M parameters against 3,928,330
+primitives and 55.0M — and interior fidelity is measured against them on held-out cuts under one
+protocol on one machine.
 </p>
 
 <h2 id="results">Results</h2>
