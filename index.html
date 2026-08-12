@@ -329,7 +329,7 @@ The representation is an order of magnitude cheaper, tracks the photographs' own
     <tr><td></td><td>Section lost to gaps, 2048 px</td><td>29.58%</td><td class="win">0.19%</td><td>156× less</td></tr>
     <tr><td></td><td>Section lost to gaps, 4096 px</td><td>72.69%</td><td class="win">0.23%</td><td>316× less</td></tr>
     <tr><td><strong>Fidelity</strong></td><td>Longitudinal FID, orange</td><td>234.2±22.6</td><td class="win">178.4</td><td></td></tr>
-    <tr><td></td><td>Transverse FID, orange</td><td>95.5±2.0</td><td class="win">79.8</td><td></td></tr>
+    <tr><td></td><td>Transverse FID, orange</td><td>102.6</td><td class="win">83.3</td><td></td></tr>
     <tr><td></td><td>Colour, a* against the photographs' 13.4</td><td>23.4</td><td class="win">12.1</td><td></td></tr>
     <tr><td><strong>Speed</strong></td><td>Render time at 2048 px</td><td>17.3 ms</td><td class="win">4.3 ms</td><td>4.0× faster</td></tr>
     <tr><td></td><td>Peak VRAM</td><td>2,174 MB</td><td class="win">819 MB</td><td>2.7× less</td></tr>
@@ -466,7 +466,11 @@ and nothing in the pipeline is told the object has a hole.</figcaption>
   transverse sections agree with each other about where the pith is and the longitudinal ones about
   where the core runs, which is the property a per-plane fit does not have.</figcaption></figure>
 
-<figure><img src="assets/interior_orange.png" alt="Orange, held-out cuts"></figure>
+<figure><img src="assets/interior_orange.png" alt="Orange, held-out cuts">
+  <figcaption>Held-out cuts of the orange — depths the training never sampled — beside the released
+  model and the photographs, all rendered by the same code on the same machine. The lattice keeps the
+  segment walls as a surface running the length of the fruit rather than as a per-plane decoration,
+  which is what the cross-view consistency figure measures.</figcaption></figure>
 <figure><img src="assets/interior_watermelon.png" alt="Watermelon, held-out cuts">
   <figcaption>Held-out cuts of the watermelon — depths the training never sampled, rendered from
   826,599 cells against the released model's 7,959,789. The rind, pith and flesh come out in the
@@ -478,15 +482,38 @@ and nothing in the pipeline is told the object has a hole.</figcaption>
 <div class="tw"><table>
   <thead><tr><th>Object</th><th>Method</th><th>FID h ↓</th><th>KID h ↓</th><th>FID v ↓</th><th>KID v ↓</th><th>Cos ↑</th></tr></thead>
   <tbody>
-    <tr><td>Orange</td><td>FruitNinja</td><td>95.5±2.0</td><td>145.9±3.0</td><td>234.2±22.6</td><td>316.4±42.5</td><td>0.966</td></tr>
-    <tr><td></td><td>Ours</td><td class="win">79.8</td><td class="win">117.8</td><td class="win">178.4</td><td class="win">213.7</td><td class="win">0.976</td></tr>
-    <tr><td>Watermelon</td><td>FruitNinja</td><td class="win">180.5±2.7</td><td class="win">218.5±12.7</td><td>244.6±14.9</td><td class="win">291.1±31.8</td><td>0.944</td></tr>
-    <tr><td></td><td>Ours</td><td>275.4±5.8</td><td>378.1±12.2</td><td class="win">235.1±5.0</td><td>304.6±14.0</td><td class="win">0.955</td></tr>
+    <tr><td>Orange</td><td>FruitNinja</td><td>102.6</td><td>165.9</td><td>234.2±22.6</td><td>316.4±42.5</td><td>0.986</td></tr>
+    <tr><td></td><td>Ours</td><td class="win">83.3</td><td class="win">122.1</td><td class="win">178.4</td><td class="win">213.7</td><td class="win">0.993</td></tr>
+    <tr><td>Watermelon</td><td>FruitNinja</td><td class="win">190.0</td><td class="win">227.4</td><td>244.6±14.9</td><td class="win">291.1±31.8</td><td>0.975</td></tr>
+    <tr><td></td><td>Ours</td><td>260.6</td><td>340.0</td><td class="win">235.1±5.0</td><td>304.6±14.0</td><td class="win">0.979</td></tr>
   </tbody></table></div>
-<p style="color:var(--mut);font-size:14px">Mean ± standard deviation over five independent draws of the
-cut planes. KID ×10⁻³.</p>
+<p style="color:var(--mut);font-size:14px">KID ×10⁻³. Transverse figures are a single draw of the
+cut planes, measured after a correction to the loader described below; longitudinal figures carry
+their earlier five-draw mean and spread, and a draw moves FID by ±2 to ±23.</p>
 <p>
-On the orange the lattice leads on both orientations — transverse FID 79.8 against 95.5, longitudinal 178.4 against 234.2 — and on cross-view consistency. The released models' figures are means over five independent draws of the cutting planes with their spread beside them; the orange lattice figures are a single draw, and a draw moves FID by ±2 to ±23, which the transverse margin does not clear on its own.
+On the orange the lattice leads on both orientations — transverse FID 83.3 against 102.6, longitudinal
+178.4 against 234.2 — and on cross-view consistency, 0.993 against 0.986. <strong>On the watermelon it
+does not:</strong> transverse FID 260.6 against 190.0. The gap is visible in the figure above and has a
+name — our seeds cover 4.8% of the flesh against the photographs' 2.5%, and our pith band is darker
+than theirs. Longitudinally the order reverses, 235.1 against 244.6, which is a small margin against a
+±14.9 spread and we do not read anything into it.
+</p>
+<p style="color:var(--mut);font-size:14px">
+<strong>A correction to how these were measured.</strong> The loader used for every offline evaluation
+reads a model's degree-zero colour and discards its higher spherical-harmonic bands. Only one of the
+models here carries any: the watermelon lattice has 24 such coefficients, mean magnitude 0.078, and the
+released models have none. Measuring it with them discarded, against a model with nothing to discard,
+put it at FID 278.0; loaded whole it is 260.6. The orange and the doughnut are degree zero and their
+figures are unchanged. We report the corrected numbers and note the earlier ones here rather than
+quietly restating them.
+</p>
+
+<p>
+CLIP scores the same held-out cuts at 32.0 for the orange lattice, 34.0 for the released orange and
+31.8 for the photographs; on the watermelon, 33.8, 32.6 and 32.8. We report them because the published
+method does, and we read nothing from them: the released orange scores further from the photographs
+than either model, in the direction of a more generic orange, which is what a prompt-similarity score
+rewards. It separates none of the differences that are actually in dispute here.
 </p>
 
 <h3>Colour and the composition of the difference</h3>
