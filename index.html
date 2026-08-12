@@ -323,8 +323,8 @@ The representation is an order of magnitude cheaper, tracks the photographs' own
   <tbody>
     <tr><td><strong>Cost</strong></td><td>Primitives, orange</td><td>3,928,330</td><td class="win">898,563</td><td>4.4× fewer</td></tr>
     <tr><td></td><td>Parameters, orange</td><td>55.0M</td><td class="win">7.2M</td><td>7.6× fewer</td></tr>
-    <tr><td></td><td>Primitives, watermelon</td><td>7,959,789</td><td class="win">826,599</td><td>9.6× fewer</td></tr>
-    <tr><td></td><td>Parameters, watermelon</td><td>111.4M</td><td class="win">6.6M</td><td>16.8× fewer</td></tr>
+    <tr><td></td><td>Primitives, watermelon</td><td>7,959,789</td><td class="win">1,520,021</td><td>5.2× fewer</td></tr>
+    <tr><td></td><td>Parameters, watermelon</td><td>111.4M</td><td class="win">12.2M</td><td>9.1× fewer</td></tr>
     <tr><td><strong>Detail</strong></td><td>Spectral power at f/16 (photographs: 0.00142)</td><td>0.00203</td><td class="win">0.00109</td><td>closer to the reference</td></tr>
     <tr><td></td><td>Section lost to gaps, 2048 px</td><td>29.58%</td><td class="win">0.19%</td><td>156× less</td></tr>
     <tr><td></td><td>Section lost to gaps, 4096 px</td><td>72.69%</td><td class="win">0.23%</td><td>316× less</td></tr>
@@ -484,19 +484,29 @@ and nothing in the pipeline is told the object has a hole.</figcaption>
   <tbody>
     <tr><td>Orange</td><td>FruitNinja</td><td>102.6</td><td>165.9</td><td>234.2±22.6</td><td>316.4±42.5</td><td>0.986</td></tr>
     <tr><td></td><td>Ours</td><td class="win">83.3</td><td class="win">122.1</td><td class="win">178.4</td><td class="win">213.7</td><td class="win">0.993</td></tr>
-    <tr><td>Watermelon</td><td>FruitNinja</td><td class="win">190.0</td><td class="win">227.4</td><td>244.6±14.9</td><td class="win">291.1±31.8</td><td>0.975</td></tr>
-    <tr><td></td><td>Ours</td><td>260.6</td><td>340.0</td><td class="win">235.1±5.0</td><td>304.6±14.0</td><td class="win">0.979</td></tr>
+    <tr><td>Watermelon</td><td>FruitNinja</td><td>190.0</td><td class="win">225.4</td><td>244.6±14.9</td><td class="win">291.1±31.8</td><td>0.975</td></tr>
+    <tr><td></td><td>Ours</td><td class="win">195.5</td><td>236.7</td><td class="win">235.1±5.0</td><td>304.6±14.0</td><td class="win">0.979</td></tr>
   </tbody></table></div>
 <p style="color:var(--mut);font-size:14px">KID ×10⁻³. Transverse figures are a single draw of the
 cut planes, measured after a correction to the loader described below; longitudinal figures carry
 their earlier five-draw mean and spread, and a draw moves FID by ±2 to ±23.</p>
 <p>
 On the orange the lattice leads on both orientations — transverse FID 83.3 against 102.6, longitudinal
-178.4 against 234.2 — and on cross-view consistency, 0.993 against 0.986. <strong>On the watermelon it
-does not:</strong> transverse FID 260.6 against 190.0. The gap is visible in the figure above and has a
-name — our seeds cover 4.8% of the flesh against the photographs' 2.5%, and our pith band is darker
-than theirs. Longitudinally the order reverses, 235.1 against 244.6, which is a small margin against a
-±14.9 spread and we do not read anything into it.
+178.4 against 234.2 — and on cross-view consistency, 0.993 against 0.986. On the watermelon the
+two are level: transverse FID 195.5 against 190.0 and KID 236.7 against 225.4, both inside the ±28 to
+±34 that a draw of the cutting planes moves them. Longitudinally the order is ours, 235.1 against
+244.6, on a ±14.9 spread we do not read anything into.
+</p>
+<p style="color:var(--mut);font-size:14px">
+<strong>What closed the watermelon gap.</strong> It was not the appearance. Five things were tried on
+the colour and the supervision — regenerating the references, capping the primitive size, thinning the
+rendered slab, changing how the reference is resampled, giving the appearance a view direction — and
+every one of them left the transverse FID between 238 and 266. The defect was geometric: a section
+cuts the curved skin obliquely, so it needs enough shell cells to fill that rim, and the lattice the
+watermelon was published with had none of the two-level refinement this page describes — its coarse
+and fine spacings were equal. Refining the skin to half the interior spacing, which is what the
+method always said it did, took the transverse FID from 238.6 to 195.5. It costs cells: 1,520,021
+rather than 826,599, so the advantage over the released model narrows from 9.6× to 5.2×.
 </p>
 <p style="color:var(--mut);font-size:14px">
 <strong>A correction to how these were measured.</strong> The loader used for every offline evaluation
