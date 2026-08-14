@@ -321,7 +321,7 @@ The representation is an order of magnitude cheaper, tracks the photographs' own
 <div class="tw"><table>
   <thead><tr><th></th><th></th><th>FruitNinja</th><th>Ours</th><th></th></tr></thead>
   <tbody>
-    <tr><td><strong>Cost</strong></td><td>Primitives, orange</td><td>3,928,330</td><td class="win">898,563</td><td>4.4× fewer</td></tr>
+    <tr><td><strong>Cost</strong></td><td>Primitives, orange</td><td>3,928,330</td><td class="win">877,495</td><td>4.4× fewer</td></tr>
     <tr><td></td><td>Parameters, orange</td><td>55.0M</td><td class="win">7.2M</td><td>7.6× fewer</td></tr>
     <tr><td></td><td>Primitives, watermelon</td><td>7,959,789</td><td class="win">1,520,021</td><td>5.2× fewer</td></tr>
     <tr><td></td><td>Parameters, watermelon</td><td>111.4M</td><td class="win">12.2M</td><td>9.1× fewer</td></tr>
@@ -329,7 +329,7 @@ The representation is an order of magnitude cheaper, tracks the photographs' own
     <tr><td></td><td>Section lost to gaps, 2048 px</td><td>29.58%</td><td class="win">0.19%</td><td>156× less</td></tr>
     <tr><td></td><td>Section lost to gaps, 4096 px</td><td>72.69%</td><td class="win">0.23%</td><td>316× less</td></tr>
     <tr><td><strong>Fidelity</strong></td><td>Longitudinal FID, orange</td><td>234.2±22.6</td><td class="win">178.4</td><td></td></tr>
-    <tr><td></td><td>Transverse FID, orange</td><td>102.6</td><td class="win">83.3</td><td></td></tr>
+    <tr><td></td><td>Transverse FID, orange</td><td>102.6</td><td class="win">79.1</td><td></td></tr>
     <tr><td></td><td>Colour, a* against the photographs' 13.4</td><td>23.4</td><td class="win">12.1</td><td></td></tr>
     <tr><td><strong>Speed</strong></td><td>Render time at 2048 px</td><td>17.3 ms</td><td class="win">4.3 ms</td><td>4.0× faster</td></tr>
     <tr><td></td><td>Peak VRAM</td><td>2,174 MB</td><td class="win">819 MB</td><td>2.7× less</td></tr>
@@ -483,7 +483,7 @@ and nothing in the pipeline is told the object has a hole.</figcaption>
   <thead><tr><th>Object</th><th>Method</th><th>FID h ↓</th><th>KID h ↓</th><th>FID v ↓</th><th>KID v ↓</th><th>Cos ↑</th></tr></thead>
   <tbody>
     <tr><td>Orange</td><td>FruitNinja</td><td>102.6</td><td>165.9</td><td>234.2±22.6</td><td>316.4±42.5</td><td>0.986</td></tr>
-    <tr><td></td><td>Ours</td><td class="win">83.3</td><td class="win">122.1</td><td class="win">178.4</td><td class="win">213.7</td><td class="win">0.993</td></tr>
+    <tr><td></td><td>Ours</td><td class="win">79.1</td><td class="win">114.0</td><td class="win">178.4</td><td class="win">213.7</td><td class="win">0.993</td></tr>
     <tr><td>Watermelon</td><td>FruitNinja</td><td>190.0</td><td class="win">225.4</td><td>244.6±14.9</td><td class="win">291.1±31.8</td><td>0.975</td></tr>
     <tr><td></td><td>Ours</td><td class="win">195.5</td><td>236.7</td><td class="win">235.1±5.0</td><td>304.6±14.0</td><td class="win">0.979</td></tr>
   </tbody></table></div>
@@ -491,7 +491,7 @@ and nothing in the pipeline is told the object has a hole.</figcaption>
 cut planes, measured after a correction to the loader described below; longitudinal figures carry
 their earlier five-draw mean and spread, and a draw moves FID by ±2 to ±23.</p>
 <p>
-On the orange the lattice leads on both orientations — transverse FID 83.3 against 102.6, longitudinal
+On the orange the lattice leads on both orientations — transverse FID 79.1 against 102.6, longitudinal
 178.4 against 234.2 — and on cross-view consistency, 0.993 against 0.986. On the watermelon the
 two are level: transverse FID 195.5 against 190.0 and KID 236.7 against 225.4, both inside the ±28 to
 ±34 that a draw of the cutting planes moves them. Longitudinally the order is ours, 235.1 against
@@ -505,8 +505,11 @@ every one of them left the transverse FID between 238 and 266. The defect was ge
 cuts the curved skin obliquely, so it needs enough shell cells to fill that rim, and the lattice the
 watermelon was published with had none of the two-level refinement this page describes — its coarse
 and fine spacings were equal. Refining the skin to half the interior spacing, which is what the
-method always said it did, took the transverse FID from 238.6 to 195.5. It costs cells: 1,520,021
-rather than 826,599, so the advantage over the released model narrows from 9.6× to 5.2×.
+method always said it did, took the watermelon's transverse FID from 238.6 to 195.5 and the
+orange's from 83.3 to 79.1. On the watermelon it costs cells — 1,520,021 rather than 826,599, so
+the advantage over the released model narrows from 9.6× to 5.2× — and on the orange it costs
+none: 877,495 against the 898,563 the unrefined lattice used, because a coarser interior pays for
+the finer skin. All three objects are now built the way this page describes them.
 </p>
 <p style="color:var(--mut);font-size:14px">
 <strong>A correction to how these were measured.</strong> The loader used for every offline evaluation
